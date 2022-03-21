@@ -40,11 +40,12 @@ auto Add(Targs&&...args)
 	return (args + ...);
 }
 
+#ifndef ALIGN
+#define ALIGN(x,a)	(((x) + ((a)-1)) & ~((a) -1))
+#endif // !ALIGN
+
 int main()
 {
-	//Print("这是二十{},b={}", 20, 30.25f);
-	std::string a{ "Hello " };
-	std::string b{ "World" };
-	 cout << Add(a, b);
-	 return 0;
+	cout << ALIGN(12, 2);
+	return 0;
 }

@@ -16,6 +16,9 @@
 #include <wrl.h>
 #include <dxgi1_4.h>
 #include <exception>
+#include <cassert>
+#include <string>
+#include <iostream>
 
 inline void ThrowIfFailed(HRESULT hr)
 {

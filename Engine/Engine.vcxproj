@@ -125,7 +125,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>E:\DirectX-Headers\include\directx;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>H:\Project_VS2019\NutEngine\Engine\Inc;E:\DirectX-Headers\include\directx;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -158,6 +158,12 @@
   <ItemGroup>
     <ClInclude Include="Engine.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Inc\Framework\Common\Allocator.hpp" />
+    <ClInclude Include="Inc\Framework\Common\BaseApplication.h" />
+    <ClInclude Include="Inc\Framework\Common\GfxConfiguration.h" />
+    <ClInclude Include="Inc\Framework\Common\MemoryManager.hpp" />
+    <ClInclude Include="Inc\Framework\Interface\IApplication.h" />
+    <ClInclude Include="Inc\Framework\Interface\IRuntimeModule.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
@@ -168,6 +174,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Src\Framework\Common\Allocator.cpp" />
+    <ClCompile Include="Src\Framework\Common\BaseApplication.cpp" />
+    <ClCompile Include="Src\Framework\Common\MemoryManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\vs.hlsl">

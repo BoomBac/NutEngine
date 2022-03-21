@@ -1,10 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
@@ -12,28 +8,77 @@
     <Filter Include="Shader">
       <UniqueIdentifier>{d93c2145-614d-48a8-855e-910e255b9a65}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files">
+    <Filter Include="Inc">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Inc\Framework">
+      <UniqueIdentifier>{07cf8768-3365-4aa8-86d8-03fa153a51b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc\Framework\Common">
+      <UniqueIdentifier>{819ff423-fa19-4774-b562-477a50a6128f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Src\Framework">
+      <UniqueIdentifier>{7168d112-ba85-4f89-9907-6fc86d3ffd97}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Framework\Common">
+      <UniqueIdentifier>{34aff3db-d437-4a0e-b637-659ebc54f9f7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc\Framework\Interface">
+      <UniqueIdentifier>{cc8df251-529d-4043-bc14-3f25644bf757}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Framework\Interface">
+      <UniqueIdentifier>{6ee304b1-9592-44d2-a1b8-f64b84f5f7c2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
-      <Filter>Header Files</Filter>
+      <Filter>Inc</Filter>
     </ClInclude>
     <ClInclude Include="pch.h">
-      <Filter>Header Files</Filter>
+      <Filter>Inc</Filter>
     </ClInclude>
     <ClInclude Include="Engine.h">
-      <Filter>Header Files</Filter>
+      <Filter>Inc</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\Allocator.hpp">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\MemoryManager.hpp">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Interface\IRuntimeModule.h">
+      <Filter>Inc\Framework\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\GfxConfiguration.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\BaseApplication.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Interface\IApplication.h">
+      <Filter>Inc\Framework\Interface</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Src</Filter>
     </ClCompile>
     <ClCompile Include="Engine.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Common\Allocator.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Common\MemoryManager.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Common\BaseApplication.cpp">
+      <Filter>Src\Framework\Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
