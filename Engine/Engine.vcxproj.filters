@@ -34,6 +34,18 @@
     <Filter Include="Src\Framework\Interface">
       <UniqueIdentifier>{6ee304b1-9592-44d2-a1b8-f64b84f5f7c2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Inc\RHI">
+      <UniqueIdentifier>{089fac0b-fc4c-4380-8c76-5d93c9f74a07}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\RHI">
+      <UniqueIdentifier>{685264d2-a916-4448-adfc-45fd637fabd4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc\Framework\Math">
+      <UniqueIdentifier>{5abe9519-d8c2-4d6b-b22e-e90ef63c96b7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc\Framework\Codec">
+      <UniqueIdentifier>{4df40bb6-0cd4-4bf9-9720-300b9bd3c155}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -63,6 +75,33 @@
     <ClInclude Include="Inc\Framework\Interface\IApplication.h">
       <Filter>Inc\Framework\Interface</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\GraphicsManager.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\RHI\D3D12GrahpicsManager.h">
+      <Filter>Inc\RHI</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\AssetLoader.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\Buffer.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\Image.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Math\NutMath.h">
+      <Filter>Inc\Framework\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Interface\ImageParser.h">
+      <Filter>Inc\Framework\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Codec\BMP.h">
+      <Filter>Inc\Framework\Codec</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\SceneObject.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -78,6 +117,15 @@
       <Filter>Src\Framework\Common</Filter>
     </ClCompile>
     <ClCompile Include="Src\Framework\Common\BaseApplication.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Common\GraphicsManager.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\RHI\D3D12GraphicsManager.cpp">
+      <Filter>Src\RHI</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Common\AssetLoader.cpp">
       <Filter>Src\Framework\Common</Filter>
     </ClCompile>
   </ItemGroup>

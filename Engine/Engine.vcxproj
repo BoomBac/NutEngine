@@ -120,7 +120,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_LIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -158,12 +158,21 @@
   <ItemGroup>
     <ClInclude Include="Engine.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Inc\Framework\Codec\BMP.h" />
     <ClInclude Include="Inc\Framework\Common\Allocator.hpp" />
+    <ClInclude Include="Inc\Framework\Common\AssetLoader.h" />
     <ClInclude Include="Inc\Framework\Common\BaseApplication.h" />
+    <ClInclude Include="Inc\Framework\Common\Buffer.h" />
     <ClInclude Include="Inc\Framework\Common\GfxConfiguration.h" />
+    <ClInclude Include="Inc\Framework\Common\GraphicsManager.h" />
+    <ClInclude Include="Inc\Framework\Common\Image.h" />
     <ClInclude Include="Inc\Framework\Common\MemoryManager.hpp" />
+    <ClInclude Include="Inc\Framework\Common\SceneObject.h" />
     <ClInclude Include="Inc\Framework\Interface\IApplication.h" />
+    <ClInclude Include="Inc\Framework\Interface\ImageParser.h" />
     <ClInclude Include="Inc\Framework\Interface\IRuntimeModule.h" />
+    <ClInclude Include="Inc\Framework\Math\NutMath.h" />
+    <ClInclude Include="Inc\RHI\D3D12GrahpicsManager.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
@@ -175,8 +184,11 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Src\Framework\Common\Allocator.cpp" />
+    <ClCompile Include="Src\Framework\Common\AssetLoader.cpp" />
     <ClCompile Include="Src\Framework\Common\BaseApplication.cpp" />
+    <ClCompile Include="Src\Framework\Common\GraphicsManager.cpp" />
     <ClCompile Include="Src\Framework\Common\MemoryManager.cpp" />
+    <ClCompile Include="Src\RHI\D3D12GraphicsManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\vs.hlsl">

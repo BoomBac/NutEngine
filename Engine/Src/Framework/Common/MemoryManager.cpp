@@ -1,6 +1,11 @@
 #include "pch.h"
 #include "Framework/Common/MemoryManager.hpp"
 
+
+#ifndef ALIGN
+#define ALIGN(x, a)         (((x) + ((a) - 1)) & ~((a) - 1))
+#endif
+
 using namespace Engine;
 
 namespace 
@@ -70,6 +75,20 @@ void* Engine::MemoryManager::Allocate(size_t size)
 		return palloc->Allocate();
 	else
 		return ::operator new(size);
+}
+
+void* Engine::MemoryManager::Allocate(size_t size, size_t alignment)
+{
+	uint8_t* p;
+	size += alignment;
+	Allocator* pAlloc = LookupAlloctor(size);
+	if (pAlloc)
+		p = reinterpret_cast<uint8_t*>(pAlloc->Allocate());
+	else
+		p = reinterpret_cast<uint8_t*>(malloc(size));
+	//TODO(): is aligned address vaild?
+	p = reinterpret_cast<uint8_t*>(ALIGN(reinterpret_cast<size_t>(p), alignment));
+	return static_cast<void*>(p);
 }
 
 void Engine::MemoryManager::Free(void* p, size_t size)

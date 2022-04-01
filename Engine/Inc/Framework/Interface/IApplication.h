@@ -1,6 +1,6 @@
 #pragma once
 #include "IRuntimeModule.h"
-#include <Framework/Common/GfxConfiguration.h>
+#include "../Common/GfxConfiguration.h"
 
 namespace Engine
 {

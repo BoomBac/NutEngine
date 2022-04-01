@@ -27,6 +27,12 @@
     <Filter Include="Source Files\Utility">
       <UniqueIdentifier>{6e5d235b-4a83-46b0-b9b9-71bc4bf4e571}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\frame">
+      <UniqueIdentifier>{fae28702-3e05-4c00-bb6b-7891453ba7e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\frame">
+      <UniqueIdentifier>{8da5c0a0-796a-4746-bb85-da4f94de0c6f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <QtRcc Include="editor.qrc">
@@ -35,12 +41,6 @@
     <QtUic Include="editor.ui">
       <Filter>Form Files</Filter>
     </QtUic>
-    <QtMoc Include="editor.h">
-      <Filter>Header Files</Filter>
-    </QtMoc>
-    <ClCompile Include="editor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -55,7 +55,13 @@
     <ClCompile Include="log.cpp">
       <Filter>Source Files\Utility</Filter>
     </ClCompile>
+    <ClCompile Include="editor.cpp">
+      <Filter>Source Files\frame</Filter>
+    </ClCompile>
     <ClCompile Include="qviewport.cpp">
+      <Filter>Source Files\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\QTApplication.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -71,10 +77,16 @@
     <ClInclude Include="log.h">
       <Filter>Header Files\Utility</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\QTApplication.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="qviewport.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\frame</Filter>
+    </QtMoc>
+    <QtMoc Include="editor.h">
+      <Filter>Header Files\frame</Filter>
     </QtMoc>
   </ItemGroup>
 </Project>

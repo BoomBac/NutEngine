@@ -1,9 +1,10 @@
 #include "pch.h"
-
 #include "Framework/Common/BaseApplication.h"
 
-Engine::BaseApplication::BaseApplication(GfxConfiguration& gcf) : config_(gcf){}
-
+Engine::BaseApplication::BaseApplication(GfxConfiguration& gcf) : config_(gcf)
+{
+	
+}
 int Engine::BaseApplication::Initialize()
 {
 	int ret = 0;

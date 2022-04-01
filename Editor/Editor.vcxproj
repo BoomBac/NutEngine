@@ -113,10 +113,12 @@
     <ClCompile Include="editor.cpp" />
     <ClCompile Include="log.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClInclude Include="Inc\QTApplication.h" />
     <ClInclude Include="log.h" />
     <QtMoc Include="qviewport.h" />
     <ClInclude Include="stdafx.h" />
     <ClCompile Include="qviewport.cpp" />
+    <ClCompile Include="Src\QTApplication.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">Create</PrecompiledHeader>

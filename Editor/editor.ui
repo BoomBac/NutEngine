@@ -26,7 +26,7 @@
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
-   <widget class="qviewport" name="wg_viewport" native="true">
+   <widget class="QWidget" name="wg_viewport" native="true">
     <property name="geometry">
      <rect>
       <x>0</x>
@@ -152,14 +152,6 @@
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
- <customwidgets>
-  <customwidget>
-   <class>qviewport</class>
-   <extends>QWidget</extends>
-   <header location="global">qviewport.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources>
   <include location="editor.qrc"/>
  </resources>

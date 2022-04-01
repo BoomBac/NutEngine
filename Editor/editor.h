@@ -10,9 +10,11 @@ class Editor : public QMainWindow
 
 public:
     Editor(QWidget* parent = Q_NULLPTR);
-
+    HWND GetViewportHandle() const;
 private:
+    HWND handle_vp_;
     Ui::EditorClass ui;
     void Init();
+    QWidget* p_viewport_;
 };
 

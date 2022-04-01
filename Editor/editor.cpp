@@ -1,21 +1,26 @@
 #include "editor.h"
 #include "stdafx.h"
+
+#include "qviewport.h"
 #include "log.h"
 
 #include <QComboBox>
 
-//#pragma comment(lib,"Engine.lib")
-using Logger::Log;
 
 Editor::Editor(QWidget *parent) : QMainWindow(parent)
 {
     ui.setupUi(this);
+    p_viewport_ = new qviewport(this);
+    p_viewport_->setFixedSize(QSize(1280, 720));
     Init();
-	//Log(ELogLevel::kLog, ELogGroup::kLogTemp, "hello{}", 20);
-	//for (int i = 0; i < 20; i++)
-	//	Log(ELogLevel::kError, ELogGroup::kLogTemp, "hello{}", i);
-	//for (int i = 20; i < 40; i++)
-	//	Log("LogTest{}", i);
+    p_viewport_->show();
+    handle_vp_ = (HWND)p_viewport_->winId();
+}
+
+HWND Editor::GetViewportHandle() const
+{
+    assert(p_viewport_ != nullptr);
+    return handle_vp_;
 }
 
 void Editor::Init()

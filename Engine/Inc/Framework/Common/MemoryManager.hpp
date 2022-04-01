@@ -26,9 +26,10 @@ namespace Engine
 		virtual int Initialize() override;
 		virtual void Finalize() override;
 		virtual void Tick() override;
-	private:
 		void* Allocate(size_t size);
+		void* Allocate(size_t size, size_t alignment);
 		void  Free(void* p, size_t size);
+
 	private:
 		static size_t* p_block_size_lookup_;
 		static Allocator* p_allocator_;

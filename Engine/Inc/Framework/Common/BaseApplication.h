@@ -9,6 +9,8 @@ namespace Engine
 	public:
 		BaseApplication() = delete;
 		explicit BaseApplication(GfxConfiguration& gcf);
+		BaseApplication& operator=(BaseApplication& other) = delete;
+		BaseApplication(BaseApplication& other) = delete;
 		int Initialize() override;
 		void Finalize() override;
 		void Tick() override;

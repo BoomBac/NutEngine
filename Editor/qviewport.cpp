@@ -12,13 +12,14 @@ qviewport::qviewport(QWidget *parent)
 	setFixedSize(1280, 720);
 	this->setAttribute(Qt::WA_PaintOnScreen);
 	setFocusPolicy(Qt::FocusPolicy::ClickFocus);
-	Engine::InitPipeline((HWND)winId());
-	Engine::LoadAsset();
-	QTimer* timer = new QTimer(this);
-	timer->start(16.7);
-	connect(timer, &QTimer::timeout, []() {
-		Engine::OnRender();
-		});
+	//HWND d = (HWND)winId();
+	//Engine::InitPipeline(d);
+	//Engine::LoadAsset();
+	//QTimer* timer = new QTimer(this);
+	//timer->start(16.7);
+	//connect(timer, &QTimer::timeout, []() {
+	//	Engine::OnRender();
+	//	});
 }
 
 qviewport::~qviewport()
