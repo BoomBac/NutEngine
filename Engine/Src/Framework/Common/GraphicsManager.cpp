@@ -1,4 +1,3 @@
-#pragma once
 #include "pch.h"
 #include "../Inc/Framework/Common/GraphicsManager.h"
 

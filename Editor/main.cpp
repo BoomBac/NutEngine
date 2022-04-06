@@ -1,9 +1,8 @@
 #include "editor.h"
 #include "stdafx.h"
 #include "Inc/QTApplication.h"
-#include "Inc/RHI/D3D12GrahpicsManager.h"
-
-#include "Engine.h"
+#include "../Inc/RHI/D3D12GrahpicsManager.h"
+#include "../Inc/Framework/Parser/FbxParser.h"
 
 
 using Engine::g_pApp;
@@ -12,6 +11,8 @@ namespace Engine
 {
     IApplication* g_pApp = new QTApplication();
     GraphicsManager* g_pGfx = new D3d12GraphicsManager();
+    MemoryManager* g_pMemoryManager = new MemoryManager();
+    AssetLoader* g_pAssetLoader = new AssetLoader();
 }
 
 int main(int argc, char *argv[])

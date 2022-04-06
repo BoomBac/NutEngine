@@ -43,7 +43,13 @@
     <Filter Include="Inc\Framework\Math">
       <UniqueIdentifier>{5abe9519-d8c2-4d6b-b22e-e90ef63c96b7}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Inc\Framework\Codec">
+    <Filter Include="External">
+      <UniqueIdentifier>{ae1e49cc-4be7-46ba-90e2-8f77f7cd40c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="External\OpenFbx">
+      <UniqueIdentifier>{e179b875-dfdf-48fc-820e-e8735bcc340a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc\Framework\Parser">
       <UniqueIdentifier>{4df40bb6-0cd4-4bf9-9720-300b9bd3c155}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -96,11 +102,29 @@
     <ClInclude Include="Inc\Framework\Interface\ImageParser.h">
       <Filter>Inc\Framework\Interface</Filter>
     </ClInclude>
-    <ClInclude Include="Inc\Framework\Codec\BMP.h">
-      <Filter>Inc\Framework\Codec</Filter>
-    </ClInclude>
     <ClInclude Include="Inc\Framework\Common\SceneObject.h">
       <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Math\Guid.h">
+      <Filter>Inc\Framework\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="External\OpenFbx\miniz.h">
+      <Filter>External\OpenFbx</Filter>
+    </ClInclude>
+    <ClInclude Include="External\OpenFbx\ofbx.h">
+      <Filter>External\OpenFbx</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\SceneNode.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Interface\ISceneParser.h">
+      <Filter>Inc\Framework\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Parser\FbxParser.h">
+      <Filter>Inc\Framework\Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Parser\BMP.h">
+      <Filter>Inc\Framework\Parser</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -127,6 +151,12 @@
     </ClCompile>
     <ClCompile Include="Src\Framework\Common\AssetLoader.cpp">
       <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="External\OpenFbx\miniz.cpp">
+      <Filter>External\OpenFbx</Filter>
+    </ClCompile>
+    <ClCompile Include="External\OpenFbx\ofbx.cpp">
+      <Filter>External\OpenFbx</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

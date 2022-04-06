@@ -3,7 +3,12 @@
 
 #include <iostream>
 #include <sstream>
-#include "Framework/Math/Math.h"
+#include <unordered_map>
+#include <utility>
+
+#include "Framework/Parser/FbxParser.h"
+
+
 
 using namespace std;
 
@@ -60,20 +65,30 @@ using namespace std;
 //	return (arr[arg] + ...);
 //}
 
+
+namespace Engine
+{
+	MemoryManager* g_pMemoryManager = new MemoryManager();
+	AssetLoader* g_pAssetLoader = new AssetLoader();
+}
+
 int main()
 {
-	Engine::Vector2f v1(1.f, 2.f);
-	Engine::Vector2f v2(1.f, 2.f);
-	Engine::Vector2f v3(1.f, 2.f);
-	Engine::Matrix4x4f mat = 
-	{{{
-		{1,2,3,4},
-		{1,2,3,4},
-		{1,2,3,4},
-		{1,2,3,4}
-	}}};
-	auto str = Engine::MatrixToString(mat);
-	cout <<  str << endl;
-	cout <<  str << endl;
+	//FILE* fp = fopen("H:/Project_VS2019/NutEngine/Engine/Asset/box.fbx", "rb");
+	//if (!fp) return false;
+	Engine::g_pMemoryManager->Initialize();
+	Engine::g_pAssetLoader->Initialize();
+	Engine::g_pAssetLoader->AddSearchPath("H:/Project_VS2019/NutEngine/Engine");
+	string fbx_name = "box.fbx";
+	Engine::ISceneParser* parser = new Engine::FbxParser();
+	auto root = parser->Parse(fbx_name);
+	//loader.OpenAndReadTextSync("C:\\Users\\22292\\Desktop\\box.fbx");
+	//fseek(fp, 0, SEEK_END);
+	//long file_size = ftell(fp);
+	//fseek(fp, 0, SEEK_SET);
+	//auto* content = new ofbx::u8[file_size];
+	//fread(content, 1, file_size, fp);
+
+	//delete[] content;
 	return 0;
 }

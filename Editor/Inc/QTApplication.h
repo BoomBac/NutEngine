@@ -1,8 +1,8 @@
 #pragma once
 #include <QtWidgets/QApplication>
 
-#include "editor.h"
-#include "Inc/Framework/Common/BaseApplication.h"
+#include "../editor.h"
+#include "../Inc/Framework/Common/BaseApplication.h"
 
 using Engine::BaseApplication;
 using Engine::GfxConfiguration;

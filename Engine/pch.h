@@ -8,17 +8,22 @@
 #define PCH_H
 
 // add headers that you want to pre-compile here
+
 #include "framework.h"
 #include <wtypes.h>
+#include "directx/d3dx12.h"
 #include <d3dcompiler.h>
 #include <dxgi.h>
-#include <d3dx12.h>
 #include <wrl.h>
 #include <dxgi1_4.h>
 #include <exception>
 #include <cassert>
 #include <string>
+#include <memory>
 #include <iostream>
+#include <vector>
+
+
 
 inline void ThrowIfFailed(HRESULT hr)
 {

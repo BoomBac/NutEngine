@@ -1,11 +1,11 @@
 #include "../Interface/IRuntimeModule.h"
+#include "../pch.h"
 #include "Buffer.h"
 
 namespace Engine
 {
 	class AssetLoader : public IRuntimeModule
-	{
-		
+	{		
 	public:
 		virtual ~AssetLoader() {};
 		int Initialize() override;
@@ -29,6 +29,7 @@ namespace Engine
 		bool FileExists(const char* filePath);
 		AssetFilePtr OpenFile(const char* name, EAssetOpenMode mode);
 		Buffer OpenAndReadTextSync(const char* filePath);
+		Buffer OpenAndReadBinarySync(const char* filePath);
 		size_t ReadSync(const AssetFilePtr& fp, Buffer& buf);
 		void CloseFile(AssetFilePtr& fp);
 		size_t GetSize(const AssetFilePtr& fp);

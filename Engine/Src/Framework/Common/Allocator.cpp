@@ -1,6 +1,4 @@
 #include "pch.h"
-#include <cassert>
-
 #include "Framework/Common/Allocator.hpp"
 
 using namespace Engine;
@@ -13,6 +11,11 @@ using namespace Engine;
 
 
 
+
+Engine::Allocator::Allocator() : p_pagelist_(nullptr), p_freelist_(nullptr), data_size_(0), page_size_(0), allgnment_size_(0)
+, block_size_(0), block_per_page_(0)
+{
+}
 
 Engine::Allocator::Allocator(size_t size, size_t page_size, size_t align) : p_pagelist_(nullptr),p_freelist_(nullptr)
 {

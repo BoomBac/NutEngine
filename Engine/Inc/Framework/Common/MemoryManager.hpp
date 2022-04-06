@@ -31,8 +31,8 @@ namespace Engine
 		void  Free(void* p, size_t size);
 
 	private:
-		static size_t* p_block_size_lookup_;
-		static Allocator* p_allocator_;
+		inline static size_t* p_block_size_lookup_ = nullptr;
+		inline static Allocator* p_allocator_ = nullptr;
 	private:
 		static Allocator* LookupAlloctor(size_t size);
 	};

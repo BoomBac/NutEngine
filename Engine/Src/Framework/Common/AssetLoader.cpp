@@ -26,7 +26,6 @@ bool Engine::AssetLoader::AddSearchPath(const char* path)
             return true;
         src++;
     }
-
     search_path_.push_back(path);
     return true;
 }
@@ -80,6 +79,7 @@ Engine::AssetLoader::AssetFilePtr Engine::AssetLoader::OpenFile(const char* name
                 bloop = false;
                 full_path.append("Asset/");
             }
+            full_path.append(name);
             switch (mode)
             {
             case Engine::AssetLoader::EAssetOpenMode::kOpenText:
@@ -110,6 +110,23 @@ Buffer Engine::AssetLoader::OpenAndReadTextSync(const char* filePath)
     }
     else
         pBuff = new Buffer();
+    return *pBuff;
+}
+
+Buffer Engine::AssetLoader::OpenAndReadBinarySync(const char* filePath)
+{
+    AssetFilePtr fp = OpenFile(filePath, EAssetOpenMode::kOpenBinary);
+    Buffer* pBuff = nullptr;
+    if (fp) {
+        size_t length = GetSize(fp);
+        pBuff = new Buffer(length);
+        fread(pBuff->p_data_, length, 1, static_cast<FILE*>(fp));
+        CloseFile(fp);
+    }
+    else {
+        fprintf(stderr, "Error opening file '%s'\n", filePath);
+        pBuff = new Buffer();
+    }
     return *pBuff;
 }
 

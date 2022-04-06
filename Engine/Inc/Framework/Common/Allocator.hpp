@@ -1,4 +1,4 @@
-#include "../../pch.h"
+#include "../pch.h"
 
 namespace Engine
 {
@@ -19,7 +19,7 @@ namespace Engine
 		static constexpr uint8_t kPATTERN_ALLOC = 0xFD;
 		static constexpr uint8_t kPATTERN_FREE = 0xFE;
 		//reset allocator
-		Allocator() = default;
+		Allocator();
 		Allocator(size_t size, size_t page_size, size_t align);
 		~Allocator();
 		void Reset(size_t size, size_t page_size, size_t align);

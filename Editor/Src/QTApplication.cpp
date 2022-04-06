@@ -1,4 +1,4 @@
-#include "Inc/QTApplication.h"
+#include "../Inc/QTApplication.h"
 
 
 QTApplication::QTApplication() : BaseApplication(qt_config)

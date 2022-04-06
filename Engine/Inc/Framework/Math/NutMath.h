@@ -1,11 +1,11 @@
+#pragma once
 #include <math.h>
-#include <limits>
-#include <cstdint>
 #include <sstream>
 #include <string>
+#include <limits>
 
 constexpr float kPi = 3.1415926f;
-constexpr float kTwoPi = kPi * 2.f;
+constexpr float kDPi = kPi * 2.f;
 
 namespace Engine
 {
@@ -16,11 +16,24 @@ namespace Engine
 	constexpr size_t CountOf(T(&)[row][col]){return row * col;}
 
 	template<typename T>
-	constexpr float Normalize(T var)
+	constexpr float normalize(T var)
 	{
-		return var < 0 ? -static_cast<float>(var) / std::numeric_limits<T>::min()
-			: static_cast<float>(var) / std::numeric_limits<T>::max();
+		return var < 0 ? -static_cast<float>(var) / (std::numeric_limits<T>::min)()
+			: static_cast<float>(var) / (std::numeric_limits<T>::max)();
 	}
+	template<typename T>
+	void Normalize(T& var)
+	{
+		size_t len = CountOf(var.data);
+		float temp[4];
+		for (uint32_t i = 0; i < len; i++)
+		{
+			temp[i] = normalize(var.data[i]);
+			var[i] = temp[i];
+		}
+
+	}
+
 	template <template<typename> class TT, typename T, int ... Indexes>
 	class Swizzle 
 	{
@@ -117,6 +130,7 @@ namespace Engine
 	};
 
 	using Vector4f = Vector4D<float>;
+	using Quaternion = Vector4D<float>;
 	using R8G8B8A8Unorm = Vector4D<uint8_t>;
 	using Vector4i = Vector4D<uint8_t> ;
 
@@ -171,7 +185,7 @@ namespace Engine
 	template<template<typename> typename TT, typename T>
 	T DotProduct(const TT<T>& first, const TT<T>& second)
 	{
-		T res;
+		T res{};
 		for (uint32_t i = 0; i < CountOf(first.data); i++)
 		{
 			res += first.data[i] * second.data[i];
@@ -239,7 +253,7 @@ namespace Engine
 		{
 			for (uint32_t j = 0; j < CountOf(m2.data); j++)
 			{
-				ret[i][j] = first[i][j] + m2[i][j];
+				ret[i][j] = m1[i][j] + m2[i][j];
 			}
 		}
 	}
@@ -303,7 +317,6 @@ namespace Engine
 	{
 		Matrix<T, Db, Dc> m2_t;
 		m2_t = Transpose(m2);
-		cout << ToString(m2_t) << endl;
 		for (uint32_t i = 0; i < Da; i++)
 		{
 			for (uint32_t j = 0; j < Dc; j++)
@@ -458,4 +471,39 @@ namespace Engine
 		matrix = rotation;
 		return;
 	}
+	void MatrixRotationAxis(Matrix4x4f& matrix, const Vector3f& axis, const float angle)
+	{
+		float c = cosf(angle), s = sinf(angle), one_minus_c = 1.0f - c;
+		Matrix4x4f rotation = { {{
+			{   c + axis.x * axis.x * one_minus_c,  axis.x * axis.y * one_minus_c + axis.z * s, axis.x * axis.z * one_minus_c - axis.y * s, 0.0f    },
+			{   axis.x * axis.y * one_minus_c - axis.z * s, c + axis.y * axis.y * one_minus_c,  axis.y * axis.z * one_minus_c + axis.x * s, 0.0f    },
+			{   axis.x * axis.z * one_minus_c + axis.y * s, axis.y * axis.z * one_minus_c - axis.x * s, c + axis.z * axis.z * one_minus_c, 0.0f },
+			{   0.0f,  0.0f,  0.0f,  1.0f   }
+		}} };
+		matrix = rotation;
+	}
+
+	void MatrixScale(Matrix4x4f& matrix, const float x, const float y, const float z)
+	{
+		Matrix4x4f scale = { {{
+		{    x, 0.0f, 0.0f, 0.0f},
+		{ 0.0f,    y, 0.0f, 0.0f},
+		{ 0.0f, 0.0f,    z, 0.0f},
+		{ 0.0f, 0.0f, 0.0f, 1.0f},
+		}} };
+		matrix = scale;
+		return;
+	}
+	
+	void MatrixRotationQuaternion(Matrix4x4f& matrix, Quaternion q)
+	{
+		Matrix4x4f rotation = { {{
+			{   1.0f - 2.0f * q.y * q.y - 2.0f * q.z * q.z,  2.0f * q.x * q.y + 2.0f * q.w * q.z,   2.0f * q.x * q.z - 2.0f * q.w * q.y,    0.0f    },
+			{   2.0f * q.x * q.y - 2.0f * q.w * q.z,    1.0f - 2.0f * q.x * q.x - 2.0f * q.z * q.z, 2.0f * q.y * q.z + 2.0f * q.w * q.x,    0.0f    },
+			{   2.0f * q.x * q.z + 2.0f * q.w * q.y,    2.0f * q.y * q.z - 2.0f * q.y * q.z - 2.0f * q.w * q.x, 1.0f - 2.0f * q.x * q.x - 2.0f * q.y * q.y, 0.0f    },
+			{   0.0f,   0.0f,   0.0f,   1.0f    }
+		}} };
+		matrix = rotation;
+	}
+
 }
