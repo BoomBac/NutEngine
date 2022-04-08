@@ -1,7 +1,12 @@
 #include "pch.h"
+#include <filesystem>
+
 #include "../Inc/Framework/Common/AssetLoader.h"
 
+
 using namespace Engine;
+
+
 
 int Engine::AssetLoader::Initialize()
 {
@@ -56,6 +61,21 @@ bool Engine::AssetLoader::FileExists(const char* filePath)
     return false;
 }
 
+
+std::string Engine::AssetLoader::GetAbsolutePath(const char* file_name) const
+{
+    std::string full_path;
+    for(auto& str : search_path_)
+    {
+        full_path.append(str);
+        full_path.append("/Asset/");
+        full_path.append(file_name);
+        std::filesystem::path _path(full_path);
+        if(std::filesystem::exists(_path)) return full_path;
+        else continue;
+    }
+}
+
 Engine::AssetLoader::AssetFilePtr Engine::AssetLoader::OpenFile(const char* name, EAssetOpenMode mode)
 {
     FILE* fp = nullptr;
@@ -91,7 +111,7 @@ Engine::AssetLoader::AssetFilePtr Engine::AssetLoader::OpenFile(const char* name
             }
             if (fp) return static_cast<AssetFilePtr>(fp);         
         }
-        full_path.append("../");
+        up_path.append("../");
     }
     return nullptr;
 }
@@ -104,8 +124,8 @@ Buffer Engine::AssetLoader::OpenAndReadTextSync(const char* filePath)
     {
         size_t length = GetSize(fp);
         pBuff = new Buffer(length + 1);
-        fread(pBuff->p_data_, length, 1, static_cast<FILE*>(fp));
-        pBuff->p_data_[length] = '\0';
+        fread(pBuff->GetData(), length, 1, static_cast<FILE*>(fp));
+        pBuff->GetData()[length] = '\0';
         CloseFile(fp);
     }
     else
@@ -120,7 +140,7 @@ Buffer Engine::AssetLoader::OpenAndReadBinarySync(const char* filePath)
     if (fp) {
         size_t length = GetSize(fp);
         pBuff = new Buffer(length);
-        fread(pBuff->p_data_, length, 1, static_cast<FILE*>(fp));
+        fread(pBuff->GetData(), length, 1, static_cast<FILE*>(fp));
         CloseFile(fp);
     }
     else {
@@ -134,7 +154,7 @@ size_t Engine::AssetLoader::ReadSync(const AssetFilePtr& fp, Buffer& buf)
 {
     size_t sz;
     if (!fp) return 0;
-    sz = fread(buf.p_data_, buf.size_, 1, static_cast<FILE*>(fp));
+    sz = fread(buf.GetData(), buf.GetDataSize(), 1, static_cast<FILE*>(fp));
     return sz;
 }
 

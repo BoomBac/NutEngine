@@ -12,8 +12,5 @@ namespace Engine
 	private:
 		std::string uid_;
 	};
-	Guid NewGuid()
-	{
-		return Guid{};
-	}
+	Guid NewGuid();
 }

@@ -2,93 +2,92 @@
 //
 
 #include <iostream>
-#include <sstream>
-#include <unordered_map>
 #include <utility>
-
+//#include "fbxsdk.h"
 #include "Framework/Parser/FbxParser.h"
 
 
-
-using namespace std;
-
-//template<typename T>
-//void format_helper(std::ostringstream& oss,
-//	std::string_view& str, const T& value)
-//{
-//	std::size_t openBracket = str.find('{');
-//	if (openBracket == std::string::npos) { return; }
-//	std::size_t closeBracket = str.find('}', openBracket + 1);
-//	if (closeBracket == std::string::npos) { return; }
-//	oss << str.substr(0, openBracket) << value;
-//	str = str.substr(closeBracket + 1);
-//}
-//
-//template<typename... Targs>
-//std::string format(std::string_view str, Targs...args)
-//{
-//	std::ostringstream oss;
-//	(format_helper(oss, str, args), ...);
-//	oss << str;
-//	return oss.str();
-//}
-//
-//template<typename... Targs>
-//void Print(std::string_view str, Targs...args)
-//{
-//	cout << format(str, args...);
-//}
-//
-//template<typename... Targs>
-//auto Add(Targs&&...args)
-//{
-//	//return (... + args);
-//	return (args + ...);
-//}
-//
-//#ifndef ALIGN
-//#define ALIGN(x,a)	(((x) + ((a)-1)) & ~((a) -1))
-//#endif // !ALIGN
-//
-//template<typename T, size_t size_of_arr>
-//constexpr size_t CountOf(T(&)[size_of_arr])
-//{
-//	return size_of_arr;
-//}
-//
-//template<typename T,typename ... args>
-//int func(T var, args... arg)
-//{
-//	T arr[sizeof...(arg)];
-//	for (int i = 0; i < sizeof...(arg); i++)
-//		arr[i] = i;
-//	return (arr[arg] + ...);
-//}
-
+using std::cout;
+using std::endl;
+//using fbxsdk::FbxCast;
 
 namespace Engine
 {
 	MemoryManager* g_pMemoryManager = new MemoryManager();
 	AssetLoader* g_pAssetLoader = new AssetLoader();
 }
+using Engine::g_pAssetLoader;
+using Engine::g_pMemoryManager;
 
-int main()
-{
-	//FILE* fp = fopen("H:/Project_VS2019/NutEngine/Engine/Asset/box.fbx", "rb");
-	//if (!fp) return false;
-	Engine::g_pMemoryManager->Initialize();
-	Engine::g_pAssetLoader->Initialize();
-	Engine::g_pAssetLoader->AddSearchPath("H:/Project_VS2019/NutEngine/Engine");
-	string fbx_name = "box.fbx";
-	Engine::ISceneParser* parser = new Engine::FbxParser();
-	auto root = parser->Parse(fbx_name);
-	//loader.OpenAndReadTextSync("C:\\Users\\22292\\Desktop\\box.fbx");
-	//fseek(fp, 0, SEEK_END);
-	//long file_size = ftell(fp);
-	//fseek(fp, 0, SEEK_SET);
-	//auto* content = new ofbx::u8[file_size];
-	//fread(content, 1, file_size, fp);
+int main(int argc,char** argv)
+{	
+	//const char* file_name = "H:/Project_VS2019/NutEngine/Engine/Asset/box.fbx";
+	g_pMemoryManager->Initialize();
+	g_pAssetLoader->Initialize();
+	g_pAssetLoader->AddSearchPath("H:/Project_VS2019/NutEngine/Engine");
+	const char* file_name = "box.fbx";
+	Engine::FbxParser parse;
+	parse.Parse(file_name);
+	g_pMemoryManager->Finalize();
+	g_pAssetLoader->Finalize();
+	// 
+	// 
+	//	// Initialize the SDK manager. This object handles memory management.
+	//FbxManager* lSdkManager = FbxManager::Create();
+	//// Create the IO settings object.
+	//FbxIOSettings* ios = FbxIOSettings::Create(lSdkManager, IOSROOT);
+	//lSdkManager->SetIOSettings(ios);
 
-	//delete[] content;
+	//// Create an importer using the SDK manager.
+	//FbxImporter* lImporter = FbxImporter::Create(lSdkManager, "");
+	//// Use the first argument as the filename for the importer.
+	//if (!lImporter->Initialize(file_name, -1, lSdkManager->GetIOSettings()))
+	//{
+	//	printf("Call to FbxImporter::Initialize() failed.\n");
+	//	printf("Error returned: %s\n\n", lImporter->GetStatus().GetErrorString());
+	//	exit(-1);
+	//}
+	//// Create a new scene so that it can be populated by the imported file.
+	//FbxScene* lScene = FbxScene::Create(lSdkManager, "myScene");
+	//lImporter->Import(lScene);
+	//FbxNode* lRootNode = lScene->GetRootNode();
+	//if (lRootNode) 
+	//{
+	//	for (int i = 0; i < lRootNode->GetChildCount(); i++) {
+	//		auto* child = lRootNode->GetChild(i);
+	//		//cout << "root's child :" << child->GetName() << endl;
+	//		//int mat_count = child->GetMaterialCount();
+	//		//if(mat_count == 0) {
+	//		//	cout << child->GetName() << "haven't material" << endl; 
+	//		//}
+	//		//else {
+
+	//		//}
+	//		fbxsdk::FbxMesh* mesh = fbxsdk::FbxCast<fbxsdk::FbxMesh>(child->GetNodeAttribute());
+	//		if (mesh != nullptr)
+	//		{
+	//			if(!mesh->IsTriangleMesh())
+	//			{
+	//				fbxsdk::FbxGeometryConverter convert(lSdkManager);
+	//				mesh = fbxsdk::FbxCast<fbxsdk::FbxMesh>(convert.Triangulate(mesh, true));
+	//				cout << mesh->GetName() << "have " << mesh->GetControlPointsCount() << "vertex" << endl;
+	//				cout << mesh->GetName() << "have " << mesh->GetPolygonCount() << " face" << endl;
+	//				cout << mesh->GetName() << "have " << mesh->GetPolygonVertexCount() << " index" << endl;
+	//			}		
+	//		}
+	//		else
+	//		{
+	//			cout << "Cast Failed" << endl;
+	//		}
+	//		cout << "--------------------------------------" << endl;
+	//		cout << endl;
+	//	}		
+	//}
+	//// Import the contents of the file into the scene.
+	//lImporter->Import(lScene);
+	//// The file is imported, so get rid of the importer.
+	//lImporter->Destroy();
+	//ios->Destroy();
+	//lSdkManager->Destroy();
 	return 0;
 }

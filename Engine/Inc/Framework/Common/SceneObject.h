@@ -1,7 +1,6 @@
 #pragma once
 #include "Image.h"
 #include "../Math/Guid.h"
-#include "../Math/NutMath.h"
 
 namespace Engine
 {
@@ -86,6 +85,67 @@ namespace Engine
             attribute_(attr), morph_target_index_(morph_index), data_type_(data_type),p_data_(data), size_(data_size) {};
         SceneObjectVertexArray(SceneObjectVertexArray& arr) = default;
         SceneObjectVertexArray(SceneObjectVertexArray && arr) = default;
+        size_t GetDataSize() const
+        {
+            size_t size = size_;
+
+            switch (data_type_) {
+            case EVertexDataType::kVertexDataFloat1:
+            case EVertexDataType::kVertexDataFloat2:
+            case EVertexDataType::kVertexDataFloat3:
+            case EVertexDataType::kVertexDataFloat4:
+                size *= sizeof(float);
+                break;
+            case EVertexDataType::kVertexDataDouble1:
+            case EVertexDataType::kVertexDataDouble2:
+            case EVertexDataType::kVertexDataDouble3:
+            case EVertexDataType::kVertexDataDouble4:
+                size *= sizeof(double);
+                break;
+            default:
+                size = 0;
+                assert(0);
+                break;
+            }
+            return size;
+        };
+        const void* GetData() const { return p_data_; }
+        size_t GetVertexCount() const
+        {
+            size_t size = size_;
+
+            switch (data_type_) {
+            case EVertexDataType::kVertexDataFloat1:
+                size /= 1;
+                break;
+            case EVertexDataType::kVertexDataFloat2:
+                size /= 2;
+                break;
+            case EVertexDataType::kVertexDataFloat3:
+                size /= 3;
+                break;
+            case EVertexDataType::kVertexDataFloat4:
+                size /= 4;
+                break;
+            case EVertexDataType::kVertexDataDouble1:
+                size /= 1;
+                break;
+            case EVertexDataType::kVertexDataDouble2:
+                size /= 2;
+                break;
+            case EVertexDataType::kVertexDataDouble3:
+                size /= 3;
+                break;
+            case EVertexDataType::kVertexDataDouble4:
+                size /= 4;
+                break;
+            default:
+                size = 0;
+                assert(0);
+                break;
+            }
+            return size;
+        }
     protected:
         const std::string attribute_;
         const uint32_t    morph_target_index_;
@@ -101,6 +161,40 @@ namespace Engine
             : material_index_(material_index), restart_index_(restart_index), data_type_(data_type), p_data_(data), size_(data_size) {};
         SceneObjectIndexArray(SceneObjectIndexArray& arr) = default;
         SceneObjectIndexArray(SceneObjectIndexArray && arr) = default;
+
+        const uint32_t GetMaterialIndex() const { return material_index_; };
+        const EIndexDataType GetIndexType() const { return data_type_; };
+        const void* GetData() const { return p_data_; };
+        size_t GetDataSize() const
+        {
+            size_t size = size_;
+
+            switch (data_type_) {
+            case EIndexDataType::kIndexData8i:
+                size *= sizeof(int8_t);
+                break;
+            case EIndexDataType::kIndexData16i:
+                size *= sizeof(int16_t);
+                break;
+            case EIndexDataType::kIndexData32i:
+                size *= sizeof(int32_t);
+                break;
+            case EIndexDataType::kIndexData64i:
+                size *= sizeof(int64_t);
+                break;
+            default:
+                size = 0;
+                assert(0);
+                break;
+            }
+
+            return size;
+        };
+
+        size_t GetIndexCount() const
+        {
+            return size_;
+        }
     protected:
         const uint32_t    material_index_;
         const size_t      restart_index_;
@@ -254,6 +348,33 @@ namespace Engine
         float       near_clip_distance_;
         float       far_clip_distance_;
         bool        b_cast_shadows_;
+        std::string texture_;
+    public:
+        void SetIfCastShadow(bool shadow) { b_cast_shadows_ = shadow; };
+        void SetColor(std::string& attrib, Vector4f& color)
+        {
+            if (attrib == "color") {
+                light_color_ = Color(color);
+            }
+        };
+        void SetParam(std::string& attrib, float param)
+        {
+            if (attrib == "intensity") {
+                intensity_ = param;
+            }
+        };
+        void SetTexture(std::string& attrib, std::string& textureName)
+        {
+            if (attrib == "projection") {
+                texture_ = textureName;
+            }
+        };
+        void SetAttenuation(AttenFunc func)
+        {
+            light_attenuation_ = func;
+        }
+        const Color& GetColor() { return light_color_; };
+        float GetIntensity() { return intensity_; };
     };
 
     class SceneObjectPointLight : public SceneObjectLight

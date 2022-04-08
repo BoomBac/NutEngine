@@ -22,7 +22,7 @@
 #include <memory>
 #include <iostream>
 #include <vector>
-
+#include <unordered_map>
 
 
 inline void ThrowIfFailed(HRESULT hr)

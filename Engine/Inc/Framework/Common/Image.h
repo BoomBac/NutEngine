@@ -1,6 +1,6 @@
 #pragma once
 #include "../pch.h"
-#include "../Math/NutMath.h"
+#include "Framework/Math/NutMath.hpp"
 
 namespace Engine
 {

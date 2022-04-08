@@ -38,12 +38,10 @@ namespace Engine
 	public:
 		using BaseSceneNode::BaseSceneNode;
 		SceneNode() = default;
-		SceneNode(const std::shared_ptr<T>& object) { p_scene_object_ = object; };
-		SceneNode(const std::shared_ptr<T>&& object) { p_scene_object_ = std::move(object); };
-		void AddSceneObjectRef(const std::shared_ptr<T>& object) { p_scene_object_ = object; };
-		void AddSceneObjectRef(const std::shared_ptr<T>&& object) { p_scene_object_ = std::move(object); };
+		void AddSceneObjectRef(const std::string& key) { scene_object_key_ = key; };
+		const std::string& GetSceneObjectRef() { return scene_object_key_; };
 	protected:
-		std::shared_ptr<T> p_scene_object_;
+		std::string scene_object_key_;
 	};
 
 	class SceneGeometryNode : public SceneNode<SceneObjectGeometry>
@@ -57,22 +55,23 @@ namespace Engine
 		void SetIfMotionBlur(bool motion_blur) { b_motion_blur_ = motion_blur; };
 		const bool MotionBlur() { return b_motion_blur_; };
 		using SceneNode::AddSceneObjectRef;
-		void AddSceneObjectRef(const std::shared_ptr<SceneObjectMaterial>& object) { materials_.push_back(object); };
+		void AddMaterialRef(const std::string& key) { materials_.push_back(key); };
+		void AddMaterialRef(const std::string&& key) { materials_.push_back(key); };
 	protected:
 		bool        b_visible_;
 		bool        b_shadow_;
 		bool        b_motion_blur_;
-		std::vector<std::shared_ptr<SceneObjectMaterial>> materials_;
+		std::vector<std::string> materials_;
 	};
 
 	class SceneLightNode : public SceneNode<SceneObjectLight>
 	{
 	public:
 		using SceneNode::SceneNode;
-		void SetTarget(Vector3f& target) { target_ = target; };
-		const Vector3f& GetTarget() { return target_; };
+		void SetIfCastShadow(bool shadow) { b_shadow_ = shadow; };
+		const bool CastShadow() { return b_shadow_; };
 	protected:
-		Vector3f target_;
+		bool b_shadow_;
 	};
 	class SceneCameraNode : public SceneNode<SceneObjectCamera>
 	{

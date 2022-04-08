@@ -78,6 +78,10 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <EnableMicrosoftCodeAnalysis>false</EnableMicrosoftCodeAnalysis>
+    <EnableClangTidyCodeAnalysis>true</EnableClangTidyCodeAnalysis>
+    <ClangTidyChecks>clang-analyzer-*,google-*,readability-*,performance-*,-clang-analyzer-cplusplus*,cppcoreguidelines-*</ClangTidyChecks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -120,12 +124,12 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_LIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_LIB;_CRT_SECURE_NO_WARNINGS;FBXSDK_SHARED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>H:\Project_VS2019\NutEngine\Engine\Inc;E:\DirectX-Headers\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>H:\Project_VS2019\NutEngine\Engine\Inc;E:\DirectX-Headers\include;H:\Project_VS2019\NutEngine\Engine\External\FBXSDK\2020.3.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -133,7 +137,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;libfbxsdk.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>H:\Project_VS2019\NutEngine\Engine\External\FBXSDK\2020.3.1\lib\vs2019\x64\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -168,14 +173,16 @@
     <ClInclude Include="Inc\Framework\Common\GraphicsManager.h" />
     <ClInclude Include="Inc\Framework\Common\Image.h" />
     <ClInclude Include="Inc\Framework\Common\MemoryManager.hpp" />
+    <ClInclude Include="Inc\Framework\Common\Scene.h" />
     <ClInclude Include="Inc\Framework\Common\SceneNode.h" />
     <ClInclude Include="Inc\Framework\Common\SceneObject.h" />
     <ClInclude Include="Inc\Framework\Interface\IApplication.h" />
     <ClInclude Include="Inc\Framework\Interface\ImageParser.h" />
     <ClInclude Include="Inc\Framework\Interface\IRuntimeModule.h" />
+    <ClInclude Include="Inc\Framework\Interface\ISceneManager.h" />
     <ClInclude Include="Inc\Framework\Interface\ISceneParser.h" />
     <ClInclude Include="Inc\Framework\Math\Guid.h" />
-    <ClInclude Include="Inc\Framework\Math\NutMath.h" />
+    <ClInclude Include="Inc\Framework\Math\NutMath.hpp" />
     <ClInclude Include="Inc\Framework\Parser\BMP.h" />
     <ClInclude Include="Inc\Framework\Parser\FbxParser.h" />
     <ClInclude Include="Inc\RHI\D3D12GrahpicsManager.h" />
@@ -185,6 +192,7 @@
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="External\OpenFbx\miniz.cpp" />
     <ClCompile Include="External\OpenFbx\ofbx.cpp" />
+    <ClCompile Include="Inc\Framework\Interface\ISceneManager.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -196,6 +204,9 @@
     <ClCompile Include="Src\Framework\Common\BaseApplication.cpp" />
     <ClCompile Include="Src\Framework\Common\GraphicsManager.cpp" />
     <ClCompile Include="Src\Framework\Common\MemoryManager.cpp" />
+    <ClCompile Include="Src\Framework\Common\Scene.cpp" />
+    <ClCompile Include="Src\Framework\Math\Guid.cpp" />
+    <ClCompile Include="Src\Framework\Parser\FbxParser.cpp" />
     <ClCompile Include="Src\RHI\D3D12GraphicsManager.cpp" />
   </ItemGroup>
   <ItemGroup>

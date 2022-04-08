@@ -1,3 +1,4 @@
+#pragma once
 #include "../Interface/IRuntimeModule.h"
 #include "../pch.h"
 #include "Buffer.h"
@@ -11,7 +12,6 @@ namespace Engine
 		int Initialize() override;
 		void Finalize() override;
 		void Tick() override;
-
 		using AssetFilePtr = void*;
 		enum class EAssetOpenMode
 		{
@@ -27,6 +27,7 @@ namespace Engine
 		bool AddSearchPath(const char* path);
 		bool RemoveSearchPath(const char* path);
 		bool FileExists(const char* filePath);
+		std::string GetAbsolutePath(const char* file_name) const;
 		AssetFilePtr OpenFile(const char* name, EAssetOpenMode mode);
 		Buffer OpenAndReadTextSync(const char* filePath);
 		Buffer OpenAndReadBinarySync(const char* filePath);
@@ -38,7 +39,7 @@ namespace Engine
 		{
 			std::string result;
 			Buffer buffer = OpenAndReadTextSync(fileName);
-			char* content = reinterpret_cast<char*>(buffer.p_data_);
+			char* content = reinterpret_cast<char*>(buffer.GetData());
 
 			if (content)
 			{
@@ -50,4 +51,5 @@ namespace Engine
 	private:
 		std::vector<std::string> search_path_;
 	};
+	extern AssetLoader* g_pAssetLoader;
 }

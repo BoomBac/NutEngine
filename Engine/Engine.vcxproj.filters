@@ -52,6 +52,12 @@
     <Filter Include="Inc\Framework\Parser">
       <UniqueIdentifier>{4df40bb6-0cd4-4bf9-9720-300b9bd3c155}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Src\Framework\Parser">
+      <UniqueIdentifier>{6e9dbe9a-4228-4b0f-8915-36ac3aa7b6ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Framework\Math">
+      <UniqueIdentifier>{8e876bea-a5c3-4f16-8a19-23960c397a9f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -96,7 +102,7 @@
     <ClInclude Include="Inc\Framework\Common\Image.h">
       <Filter>Inc\Framework\Common</Filter>
     </ClInclude>
-    <ClInclude Include="Inc\Framework\Math\NutMath.h">
+    <ClInclude Include="Inc\Framework\Math\NutMath.hpp">
       <Filter>Inc\Framework\Math</Filter>
     </ClInclude>
     <ClInclude Include="Inc\Framework\Interface\ImageParser.h">
@@ -125,6 +131,12 @@
     </ClInclude>
     <ClInclude Include="Inc\Framework\Parser\BMP.h">
       <Filter>Inc\Framework\Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Interface\ISceneManager.h">
+      <Filter>Inc\Framework\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\Scene.h">
+      <Filter>Inc\Framework\Common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -157,6 +169,18 @@
     </ClCompile>
     <ClCompile Include="External\OpenFbx\ofbx.cpp">
       <Filter>External\OpenFbx</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Common\Scene.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Inc\Framework\Interface\ISceneManager.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Parser\FbxParser.cpp">
+      <Filter>Src\Framework\Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Math\Guid.cpp">
+      <Filter>Src\Framework\Math</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

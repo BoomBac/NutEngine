@@ -1,4 +1,6 @@
+#pragma once
 #include "MemoryManager.hpp"
+
 
 namespace Engine
 {
@@ -32,6 +34,10 @@ namespace Engine
             rhs.size_ = 0;
             rhs.alignment_ = 4;
         }
+        uint8_t* GetData(void) { return p_data_; };
+        const uint8_t* GetData(void) const { return p_data_; };
+        size_t GetDataSize(void) const { return size_; };
+
         Buffer& operator = (const Buffer& rhs) 
         {
             if (size_ >= rhs.size_ && alignment_ == rhs.alignment_) 
@@ -59,7 +65,7 @@ namespace Engine
             rhs.alignment_ = 4;
             return *this;
         }
-    public:
+    protected:
         uint8_t* p_data_;
         size_t size_;
         size_t alignment_;

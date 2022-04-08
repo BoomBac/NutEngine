@@ -1,7 +1,9 @@
 #include "pch.h"
 #include "../Inc/Framework/Common/GraphicsManager.h"
 
+
 using namespace Engine;
+
 
 int Engine::GraphicsManager::Initialize()
 {
@@ -14,5 +16,13 @@ void Engine::GraphicsManager::Finalize()
 }
 
 void Engine::GraphicsManager::Tick()
+{
+}
+
+void Engine::GraphicsManager::Clear()
+{
+}
+
+void Engine::GraphicsManager::Draw()
 {
 }
