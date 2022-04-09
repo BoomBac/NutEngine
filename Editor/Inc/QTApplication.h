@@ -7,13 +7,14 @@
 using Engine::BaseApplication;
 using Engine::GfxConfiguration;
 
-static GfxConfiguration qt_config;
+
 
 
 class QTApplication : public BaseApplication
 {
 public:
-	QTApplication();
+	QTApplication() = default;
+	QTApplication(GfxConfiguration& cfg);
 	int Initialize() override;
 	void Finalize() override;
 	// One cycle of the main loop

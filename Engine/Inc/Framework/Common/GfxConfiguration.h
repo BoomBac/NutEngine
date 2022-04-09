@@ -33,7 +33,9 @@ namespace Engine
             msaa_samples_(msaa),
             viewport_width_(width),
             viewport_height_(height),
-            window_name_(window_name) {}
+            window_name_(window_name) {
+        
+        }
         int32_t red_bits_{ 8 };    ///< red color channel depth in bits
         int32_t green_bits_{ 8 };    ///< green color channel depth in bits
         int32_t blue_bits_{ 8 };     ///< blue color channel depth in bits

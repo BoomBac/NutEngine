@@ -422,6 +422,18 @@ namespace Engine
 		matrix = perspective;
 		return;
 	}
+	static void BuildPerspectiveFovRHMatrix(Matrix4x4f& matrix, const float fieldOfView, const float screenAspect, const float screenNear, const float screenDepth)
+	{
+		Matrix4x4f perspective = { {{
+			{ 1.0f / (screenAspect * tanf(fieldOfView * 0.5f)), 0.0f, 0.0f, 0.0f },
+			{ 0.0f, 1.0f / tanf(fieldOfView * 0.5f), 0.0f, 0.0f },
+			{ 0.0f, 0.0f, screenDepth / (screenNear - screenDepth), -1.0f },
+			{ 0.0f, 0.0f, (-screenNear * screenDepth) / (screenDepth - screenNear), 0.0f }
+		}} };
+
+		matrix = perspective;
+		return;
+	}
 	static void MatrixTranslation(Matrix4x4f& matrix, const float x, const float y, const float z)
 	{
 		Matrix4x4f translation = { {{

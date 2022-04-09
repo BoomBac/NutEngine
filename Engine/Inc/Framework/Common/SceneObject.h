@@ -218,6 +218,13 @@ namespace Engine
         void AddIndexArray(SceneObjectIndexArray&& array) { index_arr_.push_back(std::move(array)); };
         void AddVertexArray(SceneObjectVertexArray&& array) { vertex_arr_.push_back(std::move(array)); };
         void SetPrimitiveType(EPrimitiveType type) { prim_type_ = type; };
+        size_t GetIndexGroupCount() const { return index_arr_.size(); };
+        size_t GetIndexCount(const size_t index) const { return (index_arr_.empty() ? 0 : index_arr_[index].GetIndexCount()); };
+        size_t GetVertexCount() const { return (vertex_arr_.empty() ? 0 : vertex_arr_[0].GetVertexCount()); };
+        size_t GetVertexPropertiesCount() const { return vertex_arr_.size(); };
+        const SceneObjectVertexArray& GetVertexPropertyArray(const size_t index) const { return vertex_arr_[index]; };
+        const SceneObjectIndexArray& GetIndexArray(const size_t index) const { return index_arr_[index]; };
+        const EPrimitiveType& GetPrimitiveType() { return prim_type_; };
     protected:
         std::vector<SceneObjectIndexArray>  index_arr_;
         std::vector<SceneObjectVertexArray> vertex_arr_;
@@ -321,12 +328,10 @@ namespace Engine
         const bool MotionBlur() { return b_motion_blur_; };
         void AddMesh(std::shared_ptr<SceneObjectMesh>& mesh) 
         {
-            for (auto it = mesh_.begin(); it != mesh_.end(); it++)
-            {
-                if (*it == mesh) return;
-            }
             mesh_.push_back(mesh);
         };
+        const std::weak_ptr<SceneObjectMesh> GetMesh() { return (mesh_.empty() ? nullptr : mesh_[0]); };
+        const std::weak_ptr<SceneObjectMesh> GetMeshLOD(size_t lod) { return (lod < mesh_.size() ? mesh_[lod] : nullptr); };
     protected:
         std::vector<std::shared_ptr<SceneObjectMesh>> mesh_;
         bool        b_visible_;
@@ -423,6 +428,8 @@ namespace Engine
     public:
         SceneObjectTransform() { BuildIdentityMatrix(matrix_); b_scene_object_only_ = false; };
         SceneObjectTransform(const Matrix4x4f& matrix, const bool object_only = false) { matrix_ = matrix; b_scene_object_only_ = object_only; };
+        operator Matrix4x4f() { return matrix_; };
+        operator const Matrix4x4f() const { return matrix_; };
     protected:
         Matrix4x4f matrix_;
         bool b_scene_object_only_;

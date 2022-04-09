@@ -137,7 +137,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;libfbxsdk.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;libfbxsdk.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>H:\Project_VS2019\NutEngine\Engine\External\FBXSDK\2020.3.1\lib\vs2019\x64\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Lib>
   </ItemDefinitionGroup>
@@ -172,6 +172,7 @@
     <ClInclude Include="Inc\Framework\Common\GfxConfiguration.h" />
     <ClInclude Include="Inc\Framework\Common\GraphicsManager.h" />
     <ClInclude Include="Inc\Framework\Common\Image.h" />
+    <ClInclude Include="Inc\Framework\Common\SceneManager.h" />
     <ClInclude Include="Inc\Framework\Common\MemoryManager.hpp" />
     <ClInclude Include="Inc\Framework\Common\Scene.h" />
     <ClInclude Include="Inc\Framework\Common\SceneNode.h" />
@@ -179,7 +180,6 @@
     <ClInclude Include="Inc\Framework\Interface\IApplication.h" />
     <ClInclude Include="Inc\Framework\Interface\ImageParser.h" />
     <ClInclude Include="Inc\Framework\Interface\IRuntimeModule.h" />
-    <ClInclude Include="Inc\Framework\Interface\ISceneManager.h" />
     <ClInclude Include="Inc\Framework\Interface\ISceneParser.h" />
     <ClInclude Include="Inc\Framework\Math\Guid.h" />
     <ClInclude Include="Inc\Framework\Math\NutMath.hpp" />
@@ -192,7 +192,6 @@
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="External\OpenFbx\miniz.cpp" />
     <ClCompile Include="External\OpenFbx\ofbx.cpp" />
-    <ClCompile Include="Inc\Framework\Interface\ISceneManager.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -203,6 +202,7 @@
     <ClCompile Include="Src\Framework\Common\AssetLoader.cpp" />
     <ClCompile Include="Src\Framework\Common\BaseApplication.cpp" />
     <ClCompile Include="Src\Framework\Common\GraphicsManager.cpp" />
+    <ClCompile Include="Src\Framework\Common\SceneManager.cpp" />
     <ClCompile Include="Src\Framework\Common\MemoryManager.cpp" />
     <ClCompile Include="Src\Framework\Common\Scene.cpp" />
     <ClCompile Include="Src\Framework\Math\Guid.cpp" />
@@ -210,13 +210,22 @@
     <ClCompile Include="Src\RHI\D3D12GraphicsManager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shader\vs.hlsl">
+    <FxCompile Include="Asset\Shaders\simple_ps.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Asset\Shaders\simple_vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Asset\Shaders\type.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -27,7 +27,7 @@ int main(int argc,char** argv)
 	g_pAssetLoader->AddSearchPath("H:/Project_VS2019/NutEngine/Engine");
 	const char* file_name = "box.fbx";
 	Engine::FbxParser parse;
-	parse.Parse(file_name);
+	auto scene = parse.Parse(file_name);
 	g_pMemoryManager->Finalize();
 	g_pAssetLoader->Finalize();
 	// 

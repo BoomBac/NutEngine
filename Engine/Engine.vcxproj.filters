@@ -132,10 +132,10 @@
     <ClInclude Include="Inc\Framework\Parser\BMP.h">
       <Filter>Inc\Framework\Parser</Filter>
     </ClInclude>
-    <ClInclude Include="Inc\Framework\Interface\ISceneManager.h">
-      <Filter>Inc\Framework\Interface</Filter>
-    </ClInclude>
     <ClInclude Include="Inc\Framework\Common\Scene.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\SceneManager.h">
       <Filter>Inc\Framework\Common</Filter>
     </ClInclude>
   </ItemGroup>
@@ -173,19 +173,27 @@
     <ClCompile Include="Src\Framework\Common\Scene.cpp">
       <Filter>Src\Framework\Common</Filter>
     </ClCompile>
-    <ClCompile Include="Inc\Framework\Interface\ISceneManager.cpp">
-      <Filter>Src\Framework\Common</Filter>
-    </ClCompile>
     <ClCompile Include="Src\Framework\Parser\FbxParser.cpp">
       <Filter>Src\Framework\Parser</Filter>
     </ClCompile>
     <ClCompile Include="Src\Framework\Math\Guid.cpp">
       <Filter>Src\Framework\Math</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Framework\Common\SceneManager.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shader\vs.hlsl">
+    <FxCompile Include="Asset\Shaders\simple_vs.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
+    <FxCompile Include="Asset\Shaders\simple_ps.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Asset\Shaders\type.hlsli">
+      <Filter>Shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

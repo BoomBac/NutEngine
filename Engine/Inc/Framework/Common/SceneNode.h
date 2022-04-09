@@ -18,18 +18,31 @@ namespace Engine
 		BaseSceneNode(const std::string& name) { name_ = name; };
 		BaseSceneNode(const std::string&& name) { name_ = std::move(name); };
 		virtual ~BaseSceneNode() {};
-		void AppendChild(std::unique_ptr<BaseSceneNode>&& sub_node)
+		void AppendChild(std::shared_ptr<BaseSceneNode>&& sub_node)
 		{
 			children_.push_back(std::move(sub_node));
 		}
-		void AppendChild(std::unique_ptr<SceneObjectTransform>&& transform)
+		void AppendChild(std::shared_ptr<SceneObjectTransform>&& transform)
 		{
 			transforms_.push_back(std::move(transform));
 		}
+		const std::shared_ptr<Matrix4x4f> GetCalculatedTransform() const
+		{
+			std::shared_ptr<Matrix4x4f> result(new Matrix4x4f());
+			BuildIdentityMatrix(*result);
+
+			// TODO: cascading calculation
+			for (auto trans : transforms_)
+			{
+				*result = *result * static_cast<Matrix4x4f>(*trans);
+			}
+
+			return result;
+		}
 	protected:
 		string name_;
-		list<unique_ptr<BaseSceneNode>> children_;
-		list<unique_ptr<SceneObjectTransform>> transforms_;
+		list<std::shared_ptr<BaseSceneNode>> children_;
+		list<std::shared_ptr<SceneObjectTransform>> transforms_;
 	};
 	using SceneRootNode = BaseSceneNode;
 	template <typename T>

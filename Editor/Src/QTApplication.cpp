@@ -1,9 +1,10 @@
 #include "../Inc/QTApplication.h"
 
 
-QTApplication::QTApplication() : BaseApplication(qt_config)
-{
 
+
+QTApplication::QTApplication(GfxConfiguration& cfg) : BaseApplication(cfg)
+{
 }
 
 int QTApplication::Initialize()
@@ -15,7 +16,7 @@ int QTApplication::Initialize()
 	p_app_ = new QApplication(argc_, pp_argv_);
 	p_editor_ = new Editor();
 	p_editor_->show();
-	p_editor_->setWindowTitle(pp_argv_[0]);
+	p_editor_->setWindowTitle(config_.window_name_);
 	handle_ = dynamic_cast<Editor*>(p_editor_)->GetViewportHandle();
 	return 0;
 }

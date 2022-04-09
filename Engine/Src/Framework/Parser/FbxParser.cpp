@@ -84,7 +84,7 @@ void Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, 
 		_node->SetVisibility(_mesh->PrimaryVisibility.Get());
 		_node->SetIfMotionBlur(true);
 		_node->SetIfCastShadow(_mesh->CastShadow.Get());
-		_node->AddSceneObjectRef(object_name);
+		_node->AddSceneObjectRef(_mesh->GetName());
 		for (int32_t i = 0; i < object->GetMaterialCount(); i++)
 		{
 			auto mat = object->GetMaterial(i);
@@ -107,6 +107,7 @@ void Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, 
 	default:
 		break;
 	}
+	base_node->AppendChild(std::move(node));
 	for(int32_t i = 0; i < object->GetChildCount(); i++) {
 		ConvertFbxConstructToSceneNode(object->GetChild(i),node,scene);
 	}
