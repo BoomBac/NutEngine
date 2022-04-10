@@ -4,16 +4,17 @@
 struct a2v
 {
 	float3 Position		: POSITION;
-	//float4 Color		: COLOR;
+	float3 Color		: COLOR;
 	//float3 Normal		: NORMAL;
 	//float2 TextureUV	: TEXCOORD;
 };
 struct v2p
 {
 	float4 Position     : SV_POSITION;
+	float3 Color		: COLOR;
 	//float2 TextureUV    : TEXCOORD0;
-	float3 vNorm		: TEXCOORD1;
-	float3 vPosInView	: TEXCOORD3;
+	//float3 vNorm		: TEXCOORD1;
+	//float3 vPosInView	: TEXCOORD3;
 };
 
 cbuffer PerFrameConstants : register(b0)

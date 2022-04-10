@@ -41,6 +41,19 @@ namespace Engine
         *ppAdapter = pAdapter;
     }
 
+    struct SimpleVertex
+    {
+        Vector3f pos;
+        Vector3f color;
+    };
+    SimpleVertex verties[] =
+    {
+        {{0.f,0.25f,0.f},{1.f,0.f,0.f}},
+        {{0.25f,-0.25f,0.f},{0.f,1.f,0.f}},
+        {{-0.25f,0.25f,0.f},{0.f,0.f,1.f}},
+    };
+    uint16_t indices[] = { 1,2,3 };
+
     HRESULT D3d12GraphicsManager::CreateIndexBuffer(const SceneObjectIndexArray& index_array)
     {
         HRESULT hr;
@@ -55,7 +68,8 @@ namespace Engine
         D3D12_RESOURCE_DESC resourceDesc = {};
         resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
         resourceDesc.Alignment = 0;
-        resourceDesc.Width = index_array.GetDataSize();
+        //resourceDesc.Width = index_array.GetDataSize();
+        resourceDesc.Width = sizeof(indices);
         resourceDesc.Height = 1;
         resourceDesc.DepthOrArraySize = 1;
         resourceDesc.MipLevels = 1;
@@ -83,7 +97,7 @@ namespace Engine
         ))) return hr;
 
         D3D12_SUBRESOURCE_DATA indexData = {};
-        indexData.pData = index_array.GetData();
+        indexData.pData = indices;
 
         UpdateSubresources<1>(p_cmdlist_.Get(), pIndexBuffer.Get(), pIndexBufferUploadHeap.Get(), 0, 0, 1, &indexData);
         D3D12_RESOURCE_BARRIER barrier = {};
@@ -98,14 +112,15 @@ namespace Engine
         // initialize the index buffer view
         D3D12_INDEX_BUFFER_VIEW indexBufferView;
         indexBufferView.BufferLocation = pIndexBuffer->GetGPUVirtualAddress();
-        indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-        indexBufferView.SizeInBytes = (UINT)index_array.GetDataSize();
+        indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+        //indexBufferView.SizeInBytes = (UINT)index_array.GetDataSize();
+        indexBufferView.SizeInBytes = sizeof(indices);
         index_buf_view_.push_back(indexBufferView);
         buffers_.push_back(pIndexBuffer);
         buffers_.push_back(pIndexBufferUploadHeap);
 
         DrawBatchContext dbc;
-        dbc.count = (UINT)index_array.GetIndexCount();
+        dbc.count = 3;//(UINT)index_array.GetIndexCount();
         draw_batch_context_.push_back(std::move(dbc));
         return hr;
     }
@@ -124,7 +139,8 @@ namespace Engine
         D3D12_RESOURCE_DESC resourceDesc = {};
         resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
         resourceDesc.Alignment = 0;
-        resourceDesc.Width = v_property_array.GetDataSize();
+        //resourceDesc.Width = v_property_array.GetDataSize();
+        resourceDesc.Width = sizeof(verties);
         resourceDesc.Height = 1;
         resourceDesc.DepthOrArraySize = 1;
         resourceDesc.MipLevels = 1;
@@ -135,7 +151,7 @@ namespace Engine
         resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
         ComPtr<ID3D12Resource> pVertexBuffer;
         if (FAILED(hr = p_device_->CreateCommittedResource(&prop, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-            D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(pVertexBuffer.GetAddressOf()))))
+            D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(pVertexBuffer.GetAddressOf()))))
             return hr;
         prop.Type = D3D12_HEAP_TYPE_UPLOAD;
         prop.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
@@ -147,7 +163,7 @@ namespace Engine
             return hr;
 
         D3D12_SUBRESOURCE_DATA vertexData = {};
-        vertexData.pData = v_property_array.GetData();
+        vertexData.pData = verties;
         UpdateSubresources<1>(p_cmdlist_.Get(), pVertexBuffer.Get(), p_vertex_buf_upload_heap.Get(), 0, 0, 1, &vertexData);
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -160,8 +176,10 @@ namespace Engine
         // initialize the index buffer view
         D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
         vertexBufferView.BufferLocation = pVertexBuffer->GetGPUVirtualAddress();
-        vertexBufferView.StrideInBytes = (UINT)(v_property_array.GetDataSize() / v_property_array.GetVertexCount());
-        vertexBufferView.SizeInBytes = (UINT)v_property_array.GetDataSize();
+        //vertexBufferView.StrideInBytes = (UINT)(v_property_array.GetDataSize() / v_property_array.GetVertexCount());
+        vertexBufferView.StrideInBytes = sizeof(SimpleVertex);
+        //vertexBufferView.SizeInBytes = (UINT)v_property_array.GetDataSize();
+        vertexBufferView.SizeInBytes = sizeof(verties);
         vertex_buf_view_.push_back(vertexBufferView);
         buffers_.push_back(pVertexBuffer);
         buffers_.push_back(p_vertex_buf_upload_heap);
@@ -265,22 +283,26 @@ namespace Engine
         cbvSrvHandle[1].ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + nFrameResourceDescriptorOffset * cbv_srv_uav_desc_size_;
         
         int32_t i = 0;
-        for (auto dbc : draw_batch_context_)
-        {
-            // CBV Per Batch
-            cbvSrvHandle[1].ptr = cbv_srv_uav_desc_size_;
-            p_cmdlist_->SetGraphicsRootDescriptorTable(0, cbvSrvHandle[0]);
+        //for (auto dbc : draw_batch_context_)
+        //{
+        //    // CBV Per Batch
+        //    cbvSrvHandle[1].ptr = cbv_srv_uav_desc_size_;
+        //    p_cmdlist_->SetGraphicsRootDescriptorTable(0, cbvSrvHandle[0]);
 
-            // select which vertex buffer(s) to use
-            p_cmdlist_->IASetVertexBuffers(0, 2, &vertex_buf_view_[0]);
-            // select which index buffer to use
-            p_cmdlist_->IASetIndexBuffer(&index_buf_view_[i]);
+        //    // select which vertex buffer(s) to use
+        //    p_cmdlist_->IASetVertexBuffers(0, 2, &vertex_buf_view_[0]);
+        //    // select which index buffer to use
+        //    p_cmdlist_->IASetIndexBuffer(&index_buf_view_[i]);
 
-            // draw the vertex buffer to the back buffer
-            p_cmdlist_->DrawIndexedInstanced(dbc.count, 1, 0, 0, 0);
-            i++;
-        }
-        
+        //    // draw the vertex buffer to the back buffer
+        //    p_cmdlist_->DrawIndexedInstanced(dbc.count, 1, 0, 0, 0);
+        //    i++;
+        //}
+        p_cmdlist_->SetGraphicsRootDescriptorTable(0, cbvSrvHandle[0]);
+        p_cmdlist_->IASetVertexBuffers(0, 1, &vertex_buf_view_[0]);
+        p_cmdlist_->IASetIndexBuffer(&index_buf_view_[i]);
+        p_cmdlist_->DrawIndexedInstanced(3, 1, 0, 0, 0);
+
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -660,7 +682,7 @@ namespace Engine
         D3D12_INPUT_ELEMENT_DESC ied[] =
         {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-            //{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+            {"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
             //{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
         };
 
@@ -745,7 +767,7 @@ namespace Engine
         rtvHeapDesc.NumDescriptors = kFrameCount;
         rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
         rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        if (FAILED(hr = p_device_->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(p_rtv_heap_.GetAddressOf())))) return hr;
+        ThrowIfFailed(hr = hr = p_device_->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(p_rtv_heap_.GetAddressOf())));
         rtv_desc_size_ = p_device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
         // Describe and create a depth stencil view (DSV) descriptor heap.
