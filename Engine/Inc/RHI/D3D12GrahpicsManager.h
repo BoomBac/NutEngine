@@ -39,6 +39,7 @@ namespace Engine
         HRESULT CreateConstantBuffer();
         HRESULT CreateIndexBuffer(const SceneObjectIndexArray& index_array);
         HRESULT CreateVertexBuffer(const SceneObjectVertexArray& v_property_array);
+        HRESULT CreateVertexBuffer();
         HRESULT CreateRootSignature();
         HRESULT WaitForPreviousFrame();
         HRESULT PopulateCommandList();
@@ -48,13 +49,14 @@ namespace Engine
         static constexpr uint32_t           kMaxSceneObjectCount = 65535;
         static constexpr uint32_t           kMaxTextureCount = 2048;
         static constexpr uint32_t		    kTextureDescStartIndex = kFrameCount * (1 + kMaxSceneObjectCount);
+        static constexpr FLOAT              kBackColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
         
         ComPtr<ID3D12Device> p_device_ = nullptr;             // the pointer to our Direct3D device interface
         D3D12_VIEWPORT                  vp_;                         // viewport structure
         D3D12_RECT                      rect_;                      // scissor rect structure
         ComPtr<ID3D12Resource> p_ds_buffer_ = nullptr;
         ComPtr<IDXGISwapChain3> p_swapchain = nullptr;             // the pointer to the swap chain interface
-        ComPtr<ID3D12Resource> p_rt_[kFrameCount];      // the pointer to rendering buffer. [descriptor]
+        ComPtr<ID3D12Resource> render_target_arr_[kFrameCount];      // the pointer to rendering buffer. [descriptor]
         ComPtr<ID3D12CommandAllocator> p_cmdalloc_ = nullptr;      // the pointer to command buffer allocator
         ComPtr<ID3D12CommandQueue> p_cmdqueue_ = nullptr;          // the pointer to command queue
         ComPtr<ID3D12RootSignature> p_rootsig_ = nullptr;         // a graphics root signature defines what resources are bound to the pipeline
@@ -82,7 +84,7 @@ namespace Engine
         static constexpr size_t				kSizeConstantBufferPerFrame = kSizePerFrameConstantBuffer + kSizePerBatchConstantBuffer * kMaxSceneObjectCount;
 
         // Synchronization objects
-        uint32_t                        frame_index_;
+        uint32_t                        cur_back_buf_index_;
         HANDLE                          fence_event_;
         ComPtr<ID3D12Fence> p_fence_ = nullptr;
         uint32_t                        fence_value_;
