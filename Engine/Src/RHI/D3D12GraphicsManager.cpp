@@ -129,11 +129,17 @@ namespace Engine
 			const DirectX::XMVECTOR lightPositionX = DirectX::XMVectorSet(0.f, 3.0f, -10.0f, 1.0f);
 			const DirectX::XMVECTOR lightTargetX = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 			const DirectX::XMVECTOR lightUpX = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+			Matrix4x4f view{};
+			BuildViewLHMatrix(view,Vector3f{ 0.f, 3.0f, -10.0f },Vector3f{ 0.0f, 0.0f, 0.0f },Vector3f{ 0.0f, 1.0f, 0.0f });
+			Matrix4x4f projection{};		
 			auto view_mat = DirectX::XMMatrixLookAtLH(lightPositionX, lightTargetX, lightUpX);
 			auto aspect = 16.f / 9.f;
 			auto projection_view = DirectX::XMMatrixPerspectiveFovLH(0.8F, aspect, 1.f, 1000.f);
-			auto m = view_mat * projection_view;
-			DrawBatchContext context{ DirectX::XMMatrixTranspose(view_mat * projection_view) };
+			BuildPerspectiveFovLHMatrix(projection, 0.8F, aspect, 1.f, 1000.f);
+			auto m = view * projection;
+			auto xm = view_mat * projection_view;
+			//DrawBatchContext context{ DirectX::XMMatrixTranspose(view_mat * projection_view) };
+			DrawBatchContext context{ m };
 			memcpy(p_cbv_data_begin_, &context, sizeof(context));
 		}
 		return hr;

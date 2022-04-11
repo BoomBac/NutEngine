@@ -18,22 +18,19 @@ namespace Engine
 	constexpr size_t CountOf(T(&)[row][col]) { return row * col; }
 
 	template<typename T>
-	constexpr float normalize(T var)
-	{
-		return var < 0 ? -static_cast<float>(var) / (std::numeric_limits<T>::min)()
-			: static_cast<float>(var) / (std::numeric_limits<T>::max)();
-	}
-	template<typename T>
-	void Normalize(T& var)
+	constexpr T Normalize(T& var)
 	{
 		size_t len = CountOf(var.data);
-		float temp[4];
+		double sum = 0.f;
+		T temp{};
 		for (uint32_t i = 0; i < len; i++)
-		{
-			temp[i] = normalize(var.data[i]);
-			var[i] = temp[i];
+			sum += pow(var[i],2.f);
+		sum = sqrt(sum);
+		for (uint32_t i = 0; i < len; i++) {
+			var[i] /= sum;
+			temp[i] = var[i];
 		}
-
+		return temp;
 	}
 
 	template <template<typename> class TT, typename T, int ... Indexes>
@@ -168,6 +165,15 @@ namespace Engine
 	FF<F> VectorAdd(const FF<F> first, const TT<T>&... arg)
 	{
 		return (first + ... + arg);
+	}
+	template<template<typename> typename TT, typename T>
+	TT<T> operator-(TT<T>& v)
+	{
+		for (uint32_t i = 0; i < CountOf(v.data); i++)
+		{
+			v[i] = -v[i];
+		}
+		return v;
 	}
 	template<template<typename> typename TT, typename T>
 	TT<T> operator-(const TT<T> v1, const TT<T> v2)
@@ -377,28 +383,22 @@ namespace Engine
 		vector[2] = temp[2];
 		return;
 	}
-	static void BuildViewMatrix(Matrix4x4f& result, const Vector3f position, const Vector3f lookAt, const Vector3f up)
+	//https://stackoverflow.com/questions/349050/calculating-a-lookat-matrix
+	static Matrix4x4f BuildViewLHMatrix(Matrix4x4f& result,Vector3f position,Vector3f lookAt,Vector3f up)
 	{
 		Vector3f zAxis, xAxis, yAxis;
-		float result1, result2, result3;
 		zAxis = lookAt - position;
 		Normalize(zAxis);
-		xAxis = CrossProduct(up, zAxis);
+		xAxis = CrossProduct(up,zAxis);
 		Normalize(xAxis);
 		yAxis = CrossProduct(zAxis, xAxis);
-		result1 = DotProduct(xAxis, position);
-		result1 = -result1;
-		result2 = DotProduct(yAxis, position);
-		result2 = -result2;
-		result3 = DotProduct(zAxis, position);
-		result3 = -result3;
-		Matrix4x4f tmp = { {{
+		result = { {{
 			{ xAxis.x, yAxis.x, zAxis.x, 0.0f },
 			{ xAxis.y, yAxis.y, zAxis.y, 0.0f },
 			{ xAxis.z, yAxis.z, zAxis.z, 0.0f },
-			{ result1, result2, result3, 1.0f }
+			{ DotProduct(xAxis, -position), DotProduct(yAxis, -position), DotProduct(zAxis, -position), 1.0f }
 		}} };
-		result = tmp;
+		return result;
 	}
 	static void BuildIdentityMatrix(Matrix4x4f& matrix)
 	{

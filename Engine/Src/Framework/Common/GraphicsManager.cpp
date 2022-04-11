@@ -105,7 +105,7 @@ void Engine::GraphicsManager::CalculateCameraMatrix()
     else {
         // use default build-in camera
         Vector3f position = { 0, -5, 0 }, lookAt = { 0, 0, 0 }, up = { 0, 0, 1 };
-        BuildViewMatrix(draw_frame_context_.view_matrix_, position, lookAt, up);
+        BuildViewLHMatrix(draw_frame_context_.view_matrix_, position, lookAt, up);
     }
     float fieldOfView = kPi / 2.0f;
     float nearClipDistance = 1.0f;

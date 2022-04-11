@@ -16,7 +16,8 @@ namespace Engine
             //int32_t count;
             //std::shared_ptr<Matrix4x4f> transform;
             //std::shared_ptr<SceneObjectMaterial> material;
-            DirectX::XMMATRIX  m_modelViewProjection;
+            //DirectX::XMMATRIX  m_modelViewProjection;
+            Matrix4x4f  m_modelViewProjection;
         };
     public:
         int Initialize() override;

@@ -3,33 +3,24 @@
 
 #include <iostream>
 #include <utility>
+#include <DirectXMath.h>
+
+#include "Framework/Math/NutMath.hpp"
 //#include "fbxsdk.h"
-#include "Framework/Parser/FbxParser.h"
+
 
 
 using std::cout;
 using std::endl;
+using namespace DirectX;
+using namespace Engine;
 //using fbxsdk::FbxCast;
 
-namespace Engine
-{
-	MemoryManager* g_pMemoryManager = new MemoryManager();
-	AssetLoader* g_pAssetLoader = new AssetLoader();
-}
-using Engine::g_pAssetLoader;
-using Engine::g_pMemoryManager;
 
-int main(int argc,char** argv)
-{	
+
+void func()
+{
 	//const char* file_name = "H:/Project_VS2019/NutEngine/Engine/Asset/box.fbx";
-	g_pMemoryManager->Initialize();
-	g_pAssetLoader->Initialize();
-	g_pAssetLoader->AddSearchPath("H:/Project_VS2019/NutEngine/Engine");
-	const char* file_name = "box.fbx";
-	Engine::FbxParser parse;
-	auto scene = parse.Parse(file_name);
-	g_pMemoryManager->Finalize();
-	g_pAssetLoader->Finalize();
 	// 
 	// 
 	//	// Initialize the SDK manager. This object handles memory management.
@@ -89,5 +80,36 @@ int main(int argc,char** argv)
 	//lImporter->Destroy();
 	//ios->Destroy();
 	//lSdkManager->Destroy();
+}
+
+void BuildView(XMVECTOR pos, XMVECTOR at, XMVECTOR up)
+{
+	XMVECTOR x,y,z;
+	z = XMVector3Normalize(pos - at);
+	x = XMVector3Normalize(XMVector3Cross(up, z));
+	y = XMVector3Cross(z, x);
+	
+	Matrix4x4f tmp = { {{
+		{ x.m128_f32[0], y.m128_f32[0], z.m128_f32[0], 0.0f },
+		{ x.m128_f32[1], y.m128_f32[1], z.m128_f32[1], 0.0f },
+		{ x.m128_f32[2], y.m128_f32[2], z.m128_f32[2], 0.0f },
+		{ (-XMVector3Dot(x, pos)).m128_f32[0], (-XMVector3Dot(y, pos)).m128_f32[0], (-XMVector3Dot(z, pos)).m128_f32[0], 1.0f }
+	}} };
+}
+
+int main(int argc,char** argv)
+{	
+	const DirectX::XMVECTOR lightPositionX = DirectX::XMVectorSet(0.f, 3.0f, -10.0f, 1.0f);
+	const DirectX::XMVECTOR lightTargetX = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+	const DirectX::XMVECTOR lightUpX = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	Matrix4x4f view{};
+	BuildViewLHMatrix(view, Vector3f{ 0.f, 3.0f, -10.0f }, Vector3f{ 0.0f, 0.0f, 0.0f }, Vector3f{ 0.0f, 1.0f, 0.0f });
+	Matrix4x4f projection{};
+	auto view_mat = DirectX::XMMatrixLookAtLH(lightPositionX, lightTargetX, lightUpX);
+	auto aspect = 16.f / 9.f;
+	auto projection_view = DirectX::XMMatrixPerspectiveFovLH(0.8F, aspect, 1.f, 1000.f);
+	BuildPerspectiveFovLHMatrix(projection, 0.8F, aspect, 1.f, 1000.f);
+	auto m = view * projection;
+	auto xm = view_mat * projection_view;
 	return 0;
 }
