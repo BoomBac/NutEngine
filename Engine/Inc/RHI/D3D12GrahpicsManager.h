@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../../pch.h"
+#include <DirectXMath.h>
 #include "Framework/Common/GraphicsManager.h"
 #include "Framework/Common/SceneObject.h"
 
@@ -12,17 +13,18 @@ namespace Engine
     {
         struct DrawBatchContext 
         {
-            int32_t count;
-            std::shared_ptr<Matrix4x4f> transform;
-            std::shared_ptr<SceneObjectMaterial> material;
+            //int32_t count;
+            //std::shared_ptr<Matrix4x4f> transform;
+            //std::shared_ptr<SceneObjectMaterial> material;
+            DirectX::XMMATRIX  m_modelViewProjection;
         };
-
     public:
         int Initialize() override;
         void Finalize() override;
         void Tick() override;
         void Clear() override;
         void Draw() override;
+        void Update();
     protected:
         bool SetPerFrameShaderParameters();
         bool SetPerBatchShaderParameters(int32_t index);
@@ -38,6 +40,7 @@ namespace Engine
         HRESULT CreateTextureBuffer();
         HRESULT CreateConstantBuffer();
         HRESULT CreateIndexBuffer(const SceneObjectIndexArray& index_array);
+        HRESULT CreateIndexBuffer();
         HRESULT CreateVertexBuffer(const SceneObjectVertexArray& v_property_array);
         HRESULT CreateVertexBuffer();
         HRESULT CreateRootSignature();

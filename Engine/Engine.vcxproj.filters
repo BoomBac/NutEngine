@@ -184,16 +184,11 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Asset\Shaders\simple_vs.hlsl">
+    <FxCompile Include="Asset\Shader\simple_vs.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Asset\Shaders\simple_ps.hlsl">
+    <FxCompile Include="Asset\Shader\simple_ps.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Asset\Shaders\type.hlsli">
-      <Filter>Shader</Filter>
-    </None>
   </ItemGroup>
 </Project>
