@@ -1,18 +1,11 @@
-struct PSInput
-{
-	float4 position : SV_POSITION;
-	float4 color : COLOR;
-};
+#include "type.hlsli"
 
-cbuffer Constant : register(b0)
-{
-	float4x4 g_view_projection;
-};
+
 
 PSInput main (float4 position : POSITION, float4 color : COLOR)
 {
 	PSInput result;
-	result.position = mul(position,g_view_projection);
+	result.position = mul(position, g_projection_matrix_ * g_view_matrix_);
 	result.color =color;
 	return result;
 }

@@ -13,11 +13,12 @@ namespace Engine
     {
         struct DrawBatchContext 
         {
-            //int32_t count;
+            int32_t count;
             //std::shared_ptr<Matrix4x4f> transform;
             //std::shared_ptr<SceneObjectMaterial> material;
             //DirectX::XMMATRIX  m_modelViewProjection;
-            Matrix4x4f  m_modelViewProjection;
+            float color;
+            Matrix4x4f  mpv_projection;
         };
     public:
         int Initialize() override;
@@ -42,7 +43,7 @@ namespace Engine
         HRESULT CreateConstantBuffer();
         HRESULT CreateIndexBuffer(const SceneObjectIndexArray& index_array);
         HRESULT CreateIndexBuffer();
-        HRESULT CreateVertexBuffer(const SceneObjectVertexArray& v_property_array);
+        HRESULT CreateVertexBuffer(const SceneObjectVertexArray& vertex_array);
         HRESULT CreateVertexBuffer();
         HRESULT CreateRootSignature();
         HRESULT WaitForPreviousFrame();
@@ -83,8 +84,9 @@ namespace Engine
         std::vector<DrawBatchContext> draw_batch_context_;
         ComPtr<ID3D12Resource> p_texture_buf_;
         uint8_t* p_cbv_data_begin_ = nullptr;
-        static constexpr size_t				kSizePerFrameConstantBuffer = (sizeof(DrawBatchContext) + 255) & 256; // CB size is required to be 256-byte aligned.
-        static constexpr size_t				kSizePerBatchConstantBuffer = (sizeof(DrawBatchContext) + 255) & 256; // CB size is required to be 256-byte aligned.
+        // CB size is required to be 256-byte aligned.
+        static constexpr size_t				kSizePerBatchConstantBuffer = (sizeof(DrawBatchContext) + 255) & 256; 
+        static constexpr size_t				kSizePerFrameConstantBuffer = (sizeof(DrawFrameContext) + 255) & 256; // CB size is required to be 256-byte aligned.
         static constexpr size_t				kSizeConstantBufferPerFrame = kSizePerFrameConstantBuffer + kSizePerBatchConstantBuffer * kMaxSceneObjectCount;
 
         // Synchronization objects

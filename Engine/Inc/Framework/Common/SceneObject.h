@@ -88,19 +88,22 @@ namespace Engine
         size_t GetDataSize() const
         {
             size_t size = size_;
-
             switch (data_type_) {
             case EVertexDataType::kVertexDataFloat1:
             case EVertexDataType::kVertexDataFloat2:
             case EVertexDataType::kVertexDataFloat3:
+                size *= sizeof(float) * 3;
+                break;
             case EVertexDataType::kVertexDataFloat4:
-                size *= sizeof(float);
+                size *= sizeof(float) * 4;
                 break;
             case EVertexDataType::kVertexDataDouble1:
             case EVertexDataType::kVertexDataDouble2:
             case EVertexDataType::kVertexDataDouble3:
+                size *= sizeof(float) * 3;
+                break;
             case EVertexDataType::kVertexDataDouble4:
-                size *= sizeof(double);
+                size *= sizeof(double) * 4;
                 break;
             default:
                 size = 0;
@@ -112,45 +115,14 @@ namespace Engine
         const void* GetData() const { return p_data_; }
         size_t GetVertexCount() const
         {
-            size_t size = size_;
-
-            switch (data_type_) {
-            case EVertexDataType::kVertexDataFloat1:
-                size /= 1;
-                break;
-            case EVertexDataType::kVertexDataFloat2:
-                size /= 2;
-                break;
-            case EVertexDataType::kVertexDataFloat3:
-                size /= 3;
-                break;
-            case EVertexDataType::kVertexDataFloat4:
-                size /= 4;
-                break;
-            case EVertexDataType::kVertexDataDouble1:
-                size /= 1;
-                break;
-            case EVertexDataType::kVertexDataDouble2:
-                size /= 2;
-                break;
-            case EVertexDataType::kVertexDataDouble3:
-                size /= 3;
-                break;
-            case EVertexDataType::kVertexDataDouble4:
-                size /= 4;
-                break;
-            default:
-                size = 0;
-                assert(0);
-                break;
-            }
-            return size;
+            return size_;
         }
     protected:
         const std::string attribute_;
         const uint32_t    morph_target_index_;
         const EVertexDataType data_type_;
         const void* p_data_;
+        //represents the number of vertices, a vertex may consist of 3-4 float numbers
         size_t      size_;
     };
     class SceneObjectIndexArray
@@ -161,14 +133,16 @@ namespace Engine
             : material_index_(material_index), restart_index_(restart_index), data_type_(data_type), p_data_(data), size_(data_size) {};
         SceneObjectIndexArray(SceneObjectIndexArray& arr) = default;
         SceneObjectIndexArray(SceneObjectIndexArray && arr) = default;
-
+        ~SceneObjectIndexArray()
+        {
+            
+        }
         const uint32_t GetMaterialIndex() const { return material_index_; };
         const EIndexDataType GetIndexType() const { return data_type_; };
         const void* GetData() const { return p_data_; };
         size_t GetDataSize() const
         {
             size_t size = size_;
-
             switch (data_type_) {
             case EIndexDataType::kIndexData8i:
                 size *= sizeof(int8_t);

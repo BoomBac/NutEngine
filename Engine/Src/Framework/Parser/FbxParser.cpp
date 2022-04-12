@@ -98,6 +98,7 @@ void Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, 
 		geometry->SetVisibility(_node->Visible());
 		geometry->SetIfCastShadow(_node->CastShadow());
 		geometry->SetIfMotionBlur(true);
+		_node->AppendChild(GenerateTransform(object));
 		GenerateMesh(geometry, _mesh, scene);
 	}
 	break;
@@ -111,6 +112,33 @@ void Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, 
 	for(int32_t i = 0; i < object->GetChildCount(); i++) {
 		ConvertFbxConstructToSceneNode(object->GetChild(i),node,scene);
 	}
+}
+
+std::shared_ptr<SceneObjectTransform> Engine::FbxParser::GenerateTransform(fbxsdk::FbxNode* p_node)
+{
+	fbxsdk::FbxAMatrix matrixGeo;
+	matrixGeo.SetIdentity();
+	const auto t = p_node->GetGeometricTranslation(fbxsdk::FbxNode::eSourcePivot);
+	const auto r = p_node->GetGeometricRotation(fbxsdk::FbxNode::eSourcePivot);
+	const auto s = p_node->GetGeometricScaling(fbxsdk::FbxNode::eSourcePivot);
+	matrixGeo.SetT(t);
+	matrixGeo.SetR(r);
+	matrixGeo.SetS(s);
+	FbxAMatrix localMatrix = p_node->EvaluateLocalTransform();
+	//Recursively traverse the parent node to get the current world matrix
+	//FbxNode* pParentNode = p_node->GetParent();
+	//FbxAMatrix parentMatrix = pParentNode->EvaluateLocalTransform();
+	//while ((pParentNode = pParentNode->GetParent()) != nullptr) {
+	//	parentMatrix = pParentNode->EvaluateLocalTransform() * parentMatrix;
+	//}
+	//FbxAMatrix matrix = parentMatrix * localMatrix * matrixGeo;
+	Matrix4x4f res{};
+	for(int32_t i = 0; i < 4; ++i)
+	{
+		for (int32_t j = 0; j < 4; ++j)
+			res[i][j] = localMatrix.Get(i,j);
+	}
+	return make_shared<SceneObjectTransform>(res);
 }
 
 void Engine::FbxParser::GenerateMaterial(const fbxsdk::FbxSurfaceMaterial* mat, Scene& scene)
@@ -164,34 +192,33 @@ void Engine::FbxParser::GenerateLight(const fbxsdk::FbxLight* light, Scene& scen
 void FbxParser::GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::FbxMesh* mesh, Scene& scene)
 {
 	std::shared_ptr<SceneObjectMesh> nut_mesh(new SceneObjectMesh());
-	if(mesh->IsTriangleMesh()) {
+	if(!mesh->IsTriangleMesh()) {
 		fbxsdk::FbxGeometryConverter convert(fbx_manager_);
 		mesh = FbxCast<fbxsdk::FbxMesh>(convert.Triangulate(mesh, true));
 	}
-	size_t element_count = mesh->GetControlPointsCount();
-	size_t buffer_size = sizeof(double) * element_count * 4;
-	void* data = new double[element_count * 4];
-	bool b_reuse = false;
-	memcpy(data, mesh->GetControlPoints()->mData,buffer_size);
-	EVertexDataType vertex_type = EVertexDataType::kVertexDataDouble4;
-	SceneObjectVertexArray& _v_array = *new SceneObjectVertexArray("", 0u, vertex_type, data, element_count);
+	int32_t trangle_count = mesh->GetPolygonCount();
+	int32_t vertex_count = mesh->GetControlPointsCount();
+	//TODO:Here the vertex and index buffers are not freed and can cause memory leaks
+	void* vertex_buf = new float[vertex_count * 3];
+	fbxsdk::FbxVector4* points = mesh->GetControlPoints();
+	int32_t ctl_point_index = 0;
+	for(int32_t i = 0; i < vertex_count; ++i)
+	{
+		for (int32_t j = 0; j < 3; ++j)
+		{
+			reinterpret_cast<float*>(vertex_buf)[i * 3 + j] = points[i].mData[j];
+		}	
+	}
+	EVertexDataType vertex_type = EVertexDataType::kVertexDataFloat3;
+	SceneObjectVertexArray& _v_array = *new SceneObjectVertexArray("", 0u, vertex_type, vertex_buf, trangle_count);
 	nut_mesh->AddVertexArray(std::move(_v_array));
-	element_count = mesh->GetPolygonVertexCount();
-	void* _data = nullptr;
-	if(buffer_size >= sizeof(int32_t) * element_count) {
-		b_reuse = true;
-		_data = new(data) int32_t;
-	}
-	else {
-		_data = new int32_t[element_count];	
-		delete[] data;
-	}
-	buffer_size = sizeof(int32_t) * element_count;
+	size_t in_buf_size = sizeof(int32_t) * trangle_count * 3;
+	void* index_buf =  new int32_t[trangle_count * 3];
+	memcpy(index_buf, mesh->GetPolygonVertices(),in_buf_size);
 	EIndexDataType index_type = EIndexDataType::kIndexData32i;
-	SceneObjectIndexArray& _i_array = *new SceneObjectIndexArray(0,0,index_type,_data,element_count);
-	memcpy(_data,mesh->GetPolygonVertices(),buffer_size);
+	SceneObjectIndexArray& _i_array = *new SceneObjectIndexArray(0,0,index_type, index_buf,trangle_count * 3);
 	nut_mesh->AddIndexArray(std::move(_i_array));
-	if(b_reuse) delete[] data;
+	float* fp = reinterpret_cast<float*>(vertex_buf);
 	geo->AddMesh(nut_mesh);
 	scene.Geometries[mesh->GetName()] = geo;
 }

@@ -307,6 +307,20 @@ namespace Engine
 	}
 
 	template<typename T, int rows, int cols>
+	Matrix<T, cols, rows> Transpose(Matrix<T, rows, cols>& mat)
+	{
+		Matrix<T, cols, rows> ret;
+		for (uint32_t i = 0; i < rows; i++)
+		{
+			for (uint32_t j = 0; j < cols; j++)
+			{
+				ret[j][i] = mat[i][j];
+			}
+		}
+		mat = ret;
+		return ret;
+	}
+	template<typename T, int rows, int cols>
 	Matrix<T, cols, rows> Transpose(const Matrix<T, rows, cols>& mat)
 	{
 		Matrix<T, cols, rows> ret;
@@ -323,23 +337,25 @@ namespace Engine
 	template <typename T, int Da, int Db, int Dc>
 	void MatrixMultipy(Matrix<T, Da, Dc>& ret, const Matrix<T, Da, Db>& m1, const Matrix<T, Dc, Db>& m2)
 	{
-		Matrix<T, Db, Dc> m2_t;
-		m2_t = Transpose(m2);
+		//Matrix<T, Db, Dc> m2_t;
+		//m2_t = Transpose(m2);
 		for (uint32_t i = 0; i < Da; i++)
 		{
 			for (uint32_t j = 0; j < Dc; j++)
 			{
 				for (uint32_t k = 0; k < Dc; k++)
-					ret[i][j] += m1[i][k] * m2_t[j][k];
+					ret[i][j] += m1[j][k] * m2[k][i];
 			}
 		}
+		Transpose(ret);
 	}
+
 	template <typename T, int row, int col>
 	Matrix<T, row, col> operator*(const Matrix<T, row, col>& m1, const Matrix<T, row, col>& m2)
 	{
-		Matrix<T, row, col> ret;
+		Matrix<T, row, col> ret{};
 		MatrixMultipy(ret, m1, m2);
-		return m1;
+		return ret;
 	}
 	static void MatrixRotationYawPitchRoll(Matrix4x4f& matrix, const float yaw, const float pitch, const float roll)
 	{
@@ -390,6 +406,22 @@ namespace Engine
 		zAxis = lookAt - position;
 		Normalize(zAxis);
 		xAxis = CrossProduct(up,zAxis);
+		Normalize(xAxis);
+		yAxis = CrossProduct(zAxis, xAxis);
+		result = { {{
+			{ xAxis.x, yAxis.x, zAxis.x, 0.0f },
+			{ xAxis.y, yAxis.y, zAxis.y, 0.0f },
+			{ xAxis.z, yAxis.z, zAxis.z, 0.0f },
+			{ DotProduct(xAxis, -position), DotProduct(yAxis, -position), DotProduct(zAxis, -position), 1.0f }
+		}} };
+		return result;
+	}
+	static Matrix4x4f BuildViewRHMatrix(Matrix4x4f& result, Vector3f position, Vector3f lookAt, Vector3f up)
+	{
+		Vector3f zAxis, xAxis, yAxis;
+		zAxis = lookAt - position;
+		Normalize(zAxis);
+		xAxis = CrossProduct(up, zAxis);
 		Normalize(xAxis);
 		yAxis = CrossProduct(zAxis, xAxis);
 		result = { {{

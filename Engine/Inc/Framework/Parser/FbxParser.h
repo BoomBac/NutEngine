@@ -25,5 +25,6 @@ namespace Engine
 		void GenerateLight(const fbxsdk::FbxLight* light, Scene& scene);
 		void GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::FbxMesh* mesh, Scene& scene);
 		void ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object,std::shared_ptr<BaseSceneNode>& base_node,Scene& scene);
+		std::shared_ptr<SceneObjectTransform> GenerateTransform(fbxsdk::FbxNode* p_node);
 	};
 }
