@@ -10,12 +10,17 @@ namespace Engine
 	{
 	public:
 		virtual ~GraphicsManager() {}
-
 		virtual int Initialize();
 		virtual void Finalize();
 		virtual void Tick();
 		virtual void Clear();
 		virtual void Draw();
+		//temp
+		void WorldRotateY(float radius);
+		void MoveCameraForward(float distance);
+		void MoveCameraRight(float distance);
+		void CameraRotateYaw(float angle);
+		void CameraRotatePitch(float angle);
 #ifdef DEBUG
 		virtual void DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color);
 		virtual void DrawBox(const Vector3f& bbMin, const Vector3f& bbMax, const Vector3f& color);
@@ -43,6 +48,8 @@ namespace Engine
 			Vector4f    light_color_;
 		};
 		DrawFrameContext    draw_frame_context_;
+		//temp
+		std::unique_ptr<SceneObjectPerspectiveCamera> p_camera_;
 	};
 	extern GraphicsManager* g_pGraphicsManager;
 }

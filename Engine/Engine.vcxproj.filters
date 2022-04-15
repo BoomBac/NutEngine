@@ -138,6 +138,9 @@
     <ClInclude Include="Inc\Framework\Common\SceneManager.h">
       <Filter>Inc\Framework\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\InputManager.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -180,6 +183,12 @@
       <Filter>Src\Framework\Math</Filter>
     </ClCompile>
     <ClCompile Include="Src\Framework\Common\SceneManager.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Common\InputManager.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Common\SceneObject.cpp">
       <Filter>Src\Framework\Common</Filter>
     </ClCompile>
   </ItemGroup>

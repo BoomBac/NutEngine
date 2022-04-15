@@ -374,13 +374,59 @@ namespace Engine
     class SceneObjectCamera : public BaseSceneObject
     {
     public:
-        SceneObjectCamera() : BaseSceneObject(ESceneObjectType::kSceneObjectTypeCamera) {};
-        SceneObjectCamera(float aspect = 16.0f / 9.0f, float near_clip = 1.0f, float far_clip = 100.0f) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeCamera), 
-            fov_(aspect), near_clip_distance_(near_clip), far_clip_distance_(far_clip) {};
+        SceneObjectCamera() : BaseSceneObject(ESceneObjectType::kSceneObjectTypeCamera) 
+        {
+            UpdateViewMatrix();
+        };
+        SceneObjectCamera(float aspect, float near_clip = 10.0f, float far_clip = 10000.0f) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeCamera), 
+            aspect_(aspect), near_clip_distance_(near_clip), far_clip_distance_(far_clip) 
+        {
+            UpdateViewMatrix();
+        };
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="name">near,far,aspect,fov</param>
+        /// <param name="param"></param>
+        void SetParam(std::string name,float param)
+        {
+            if(name == "near") near_clip_distance_ = param;
+            else if(name == "far") far_clip_distance_ = param;
+            else if (name == "aspect") aspect_ = param;
+        }
+
+        void SetLens(float fovy,float aspect,float nz,float fz);
+        float GetNearZ() const { return near_clip_distance_; };
+        float GetFarZ() const { return far_clip_distance_; };
+        float GetAspect() const {return aspect_;};
+        float GetFovX() const;
+        float GetFovY() const;
+        float GetNearPlaneWidth() const;
+        float GetFarPlaneWidth() const;
+        float GetNearPlaneHeight() const;
+        float GetFarPlaneHeight() const;
+        const Matrix4x4f& GetProjection() const { return projection_; }
+        const Matrix4x4f& GetView() const { return view_; }
+        void MoveForward(float dis);
+        void MoveRight(float dis);
+        void RotatePitch(float angle);
+        void RotateYaw(float angle);
     protected:
-        float fov_;
+        void UpdateViewMatrix();
+        Vector3f position_{ 0.f, 0.0f, -1000.f }; 
+        Vector3f forawrd_{ 0.0f, 0.0f, 1.f };
+        Vector3f up_{ 0.0f, 1.0f, 0.0f };
+        Vector3f right_{1.f,0.f,0.f};
+
+        bool b_dirty_ = true;
+        float aspect_;
         float near_clip_distance_;
         float far_clip_distance_;
+        float fov_;
+        float near_plane_height_;
+        float far_plane_height_;
+        Matrix4x4f view_{};
+        Matrix4x4f projection_{};
     };
     class SceneObjectOrthogonalCamera : public SceneObjectCamera
     {
@@ -390,11 +436,20 @@ namespace Engine
     class SceneObjectPerspectiveCamera : public SceneObjectCamera
     {
     protected:
-        float m_fFov;
-
     public:
-        SceneObjectPerspectiveCamera(float aspect = 16.0f / 9.0f, float near_clip = 1.0f, float far_clip = 100.0f, 
-            float fov = kPi / 2.0) : SceneObjectCamera(aspect, near_clip, far_clip), m_fFov(fov) {};
+        SceneObjectPerspectiveCamera(float aspect = 16.0f / 9.0f, float near_clip = 10.0f, float far_clip = 10000.0f, 
+            float fov = kPi / 2.0) : SceneObjectCamera(aspect, near_clip, far_clip)
+        {
+            fov_ = fov;
+        };
+        void SetParam(std::string name, float param)
+        {
+            if(name == "fov")
+                fov_ = param;
+            else
+                SceneObjectCamera::SetParam(name,param);
+        }
+        float GetFov() const {return fov_;}
     };
 
     class SceneObjectTransform

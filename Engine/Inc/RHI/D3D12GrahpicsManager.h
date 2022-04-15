@@ -11,14 +11,15 @@ namespace Engine
 {
     class D3d12GraphicsManager : public GraphicsManager
     {
+        //
         struct DrawBatchContext 
         {
+            Matrix4x4f object_matrix;
             int32_t count;
+            float color;
             //std::shared_ptr<Matrix4x4f> transform;
             //std::shared_ptr<SceneObjectMaterial> material;
-            //DirectX::XMMATRIX  m_modelViewProjection;
-            float color;
-            Matrix4x4f  mpv_projection;
+            //DirectX::XMMATRIX  m_modelViewProjection;       
         };
     public:
         int Initialize() override;
@@ -88,7 +89,6 @@ namespace Engine
         static constexpr size_t				kSizePerBatchConstantBuffer = (sizeof(DrawBatchContext) + 255) & 256; 
         static constexpr size_t				kSizePerFrameConstantBuffer = (sizeof(DrawFrameContext) + 255) & 256; // CB size is required to be 256-byte aligned.
         static constexpr size_t				kSizeConstantBufferPerFrame = kSizePerFrameConstantBuffer + kSizePerBatchConstantBuffer * kMaxSceneObjectCount;
-
         // Synchronization objects
         uint32_t                        cur_back_buf_index_;
         HANDLE                          fence_event_;

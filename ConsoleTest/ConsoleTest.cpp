@@ -86,6 +86,12 @@ void func()
 
 int main(int argc,char** argv)
 {	
-
+	XMMATRIX xr = XMMatrixRotationY(60.f); 
+	Matrix4x4f r{};
+	MatrixRotationY(r, 60.f);
+	XMVECTOR vec{1.f,0.f,0.f,0.f};
+	vec = XMVector3TransformCoord(vec,xr);
+	Vector4f v{1.f,0.f,0.f,1.f};
+	Transform(v,r);
 	return 0;
 }

@@ -11,6 +11,9 @@ constexpr float kDPi = kPi * 2.f;
 
 namespace Engine
 {
+	static float AngleToRadius(const float& angle) {return angle * kPi / 180.f;}
+	static float RadiusToAngle(const float& radius) {return 180.f * radius / kPi;}
+
 	template<typename T, size_t size_of_arr>
 	constexpr size_t CountOf(T(&)[size_of_arr]) { return size_of_arr; }
 
@@ -118,7 +121,7 @@ namespace Engine
 			Swizzle<Vector4D, T, 2, 1, 0, 3> bgra;
 		};
 
-		Vector4D<T>() {};
+		Vector4D<T>() {x = 0;y = 0;z=0;w=0;};
 		Vector4D<T>(const T& _v) : x(_v), y(_v), z(_v), w(_v) {};
 		Vector4D<T>(const T& _x, const T& _y, const T& _z, const T& _w) : x(_x), y(_y), z(_z), w(_w) {};
 		Vector4D<T>(const Vector3D<T>& v3) : x(v3.x), y(v3.y), z(v3.z), w(1.0f) {};
@@ -155,6 +158,16 @@ namespace Engine
 		for (uint32_t i = 0; i < CountOf(v1.data); i++)
 		{
 			res.data[i] = v1.data[i] + v2.data[i];
+		}
+		return res;
+	}
+	template<template<typename> typename TT, typename T>
+	TT<T> operator*(const T& scalar,const TT<T>& v)
+	{
+		TT<T> res;
+		for (uint32_t i = 0; i < CountOf(v.data); i++)
+		{
+			res.data[i] = scalar * v.data[i];
 		}
 		return res;
 	}
@@ -379,7 +392,7 @@ namespace Engine
 	}
 	static void Transform(Vector4f& vector, const Matrix4x4f& matrix)
 	{
-		Vector4f temp;
+		Vector4f temp{};
 		for (uint32_t i = 0; i < 4; i++)
 		{
 			for (uint32_t j = 0; j < 4; j++)
@@ -392,20 +405,20 @@ namespace Engine
 	}
 	static void TransformCoord(Vector3f& vector, const Matrix4x4f& matrix)
 	{
-		Vector4f temp;
+		Vector4f temp{vector,1.f};
 		Transform(temp, matrix);
 		vector[0] = temp[0];
 		vector[1] = temp[1];
 		vector[2] = temp[2];
+
 		return;
 	}
-	//https://stackoverflow.com/questions/349050/calculating-a-lookat-matrix
-	static Matrix4x4f BuildViewLHMatrix(Matrix4x4f& result,Vector3f position,Vector3f lookAt,Vector3f up)
+	static Matrix4x4f BuildViewMatrixLookToLH(Matrix4x4f& result, Vector3f position, Vector3f lookTo, Vector3f up)
 	{
 		Vector3f zAxis, xAxis, yAxis;
-		zAxis = lookAt - position;
+		zAxis = lookTo;
 		Normalize(zAxis);
-		xAxis = CrossProduct(up,zAxis);
+		xAxis = CrossProduct(up, zAxis);
 		Normalize(xAxis);
 		yAxis = CrossProduct(zAxis, xAxis);
 		result = { {{
@@ -416,6 +429,14 @@ namespace Engine
 		}} };
 		return result;
 	}
+	//https://stackoverflow.com/questions/349050/calculating-a-lookat-matrix
+	static Matrix4x4f BuildViewMatrixLookAtLH(Matrix4x4f& result,Vector3f position,Vector3f look_at,Vector3f up)
+	{
+		Vector3f zAxis, xAxis, yAxis;
+		zAxis = look_at - position;
+		return BuildViewMatrixLookToLH(result,position,zAxis,up);
+	}
+
 	static Matrix4x4f BuildViewRHMatrix(Matrix4x4f& result, Vector3f position, Vector3f lookAt, Vector3f up)
 	{
 		Vector3f zAxis, xAxis, yAxis;
@@ -442,6 +463,16 @@ namespace Engine
 		}} };
 		matrix = identity;
 		return;
+	}
+	static Matrix4x4f BuildIdentityMatrix()
+	{
+		Matrix4x4f identity = { {{
+			{ 1.0f, 0.0f, 0.0f, 0.0f},
+			{ 0.0f, 1.0f, 0.0f, 0.0f},
+			{ 0.0f, 0.0f, 1.0f, 0.0f},
+			{ 0.0f, 0.0f, 0.0f, 1.0f}
+		}} };
+		return identity;
 	}
 	static void BuildPerspectiveFovLHMatrix(Matrix4x4f& matrix, const float fieldOfView, const float screenAspect, const float screenNear, const float screenDepth)
 	{
@@ -475,7 +506,16 @@ namespace Engine
 			{    x,    y,    z, 1.0f}
 		}} };
 		matrix = translation;
-		return;
+	}
+	static Matrix4x4f MatrixTranslation(const float x, const float y, const float z)
+	{
+		Matrix4x4f translation = { {{
+			{ 1.0f, 0.0f, 0.0f, 0.0f},
+			{ 0.0f, 1.0f, 0.0f, 0.0f},
+			{ 0.0f, 0.0f, 1.0f, 0.0f},
+			{    x,    y,    z, 1.0f}
+		}} };
+		return translation;
 	}
 	static void MatrixRotationX(Matrix4x4f& matrix, const float angle)
 	{
@@ -538,9 +578,17 @@ namespace Engine
 		{ 0.0f, 0.0f, 0.0f, 1.0f},
 		}} };
 		matrix = scale;
-		return;
 	}
-
+	static Matrix4x4f MatrixScale(const float x, const float y, const float z)
+	{
+		Matrix4x4f scale = { {{
+		{    x, 0.0f, 0.0f, 0.0f},
+		{ 0.0f,    y, 0.0f, 0.0f},
+		{ 0.0f, 0.0f,    z, 0.0f},
+		{ 0.0f, 0.0f, 0.0f, 1.0f},
+		}} };
+		return scale;
+	}
 	static void MatrixRotationQuaternion(Matrix4x4f& matrix, Quaternion q)
 	{
 		Matrix4x4f rotation = { {{

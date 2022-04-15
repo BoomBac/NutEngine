@@ -19,9 +19,9 @@ cbuffer DrawFrameContext : register(b0)
 };
 cbuffer DrawBatchContext : register(b1)
 {
+	float4x4 g_object_matrix_;
 	int g_count_;
-	float g_color;
-	float4x4 g_vp_matrix_;
+	float g_color_;
 };
 
 

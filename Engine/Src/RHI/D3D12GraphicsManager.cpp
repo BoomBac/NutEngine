@@ -44,7 +44,6 @@ namespace Engine
 		Vector3f position;
 		//Vector4f color;
 	};
-
 	int Engine::D3d12GraphicsManager::Initialize()
 	{
 		int result = GraphicsManager::Initialize();
@@ -93,6 +92,9 @@ namespace Engine
 	}
 	bool D3d12GraphicsManager::SetPerFrameShaderParameters()
 	{
+		//temp
+		draw_frame_context_.view_matrix_ = Transpose(p_camera_->GetView());
+		draw_frame_context_.projection_matrix_ = Transpose(p_camera_->GetProjection());
 		memcpy(p_cbv_data_begin_ + cur_back_buf_index_ * kSizeConstantBufferPerFrame, &draw_frame_context_, sizeof(draw_frame_context_));
 		return true;
 	}
@@ -136,6 +138,7 @@ namespace Engine
 						const SceneObjectIndexArray& index_array = pMesh->GetIndexArray(i);
 						CreateIndexBuffer(index_array);
 					}
+					draw_batch_context_[n].object_matrix = Transpose(*pGeometryNode->GetCalculatedTransform());
 					n++;
 				}
 				pGeometryNode = scene->GetNextGeometryNode();
@@ -156,18 +159,22 @@ namespace Engine
 		{
 			auto aspect = 16.f / 9.f;
 			Matrix4x4f view{};
-			Matrix4x4f projection{};
-			BuildViewLHMatrix(view,Vector3f{ 0.f, 3.0f, -10.0f },Vector3f{ 0.0f, 0.0f, 0.0f },Vector3f{ 0.0f, 1.0f, 0.0f });
-			BuildPerspectiveFovLHMatrix(projection, 0.8F, aspect, 1.f, 100.f);
-			//Matrix4x4f world{};
-			//MatrixTranslation(world,5.f,0.f,0.f);
-			//const auto m = Transpose(world * view * projection);
-			draw_frame_context_.view_matrix_ = Transpose(view);
-			draw_frame_context_.projection_matrix_ = Transpose(projection);
-			draw_frame_context_.world_matrix_ = Transpose(view * projection);
+			Matrix4x4f projection{};	
+			//lenth is cm			
+			p_camera_ = std::make_unique<SceneObjectPerspectiveCamera>();
+			p_camera_->SetLens(1.57F, aspect, 10.f, 100000.f);
+
+			BuildViewMatrixLookAtLH(view, Vector3f{ 0.f, 0.0f, -1000.f }, Vector3f{ 0.0f, 0.0f, 1000.f }, Vector3f{ 0.0f, 1.0f, 0.0f });
+			BuildPerspectiveFovLHMatrix(projection, 1.57F, aspect, 100.f, 100000.f);
+
+			draw_frame_context_.view_matrix_ = Transpose(p_camera_->GetView());
+			draw_frame_context_.projection_matrix_ = Transpose(p_camera_->GetProjection());
+			draw_frame_context_.world_matrix_ = BuildIdentityMatrix();
 			memcpy(p_cbv_data_begin_, reinterpret_cast<void*>(&draw_frame_context_),sizeof(DrawFrameContext));
-			draw_batch_context_[0].color = 0.2f;
-			SetPerBatchShaderParameters(0);
+			Matrix4x4f world{};
+			BuildIdentityMatrix(world);
+			MatrixTranslation(world,0,0,0);
+			draw_batch_context_[0].color = 0.5f;
 		}
 		return hr;
 	}
@@ -440,7 +447,7 @@ namespace Engine
 		D3D12_GPU_DESCRIPTOR_HANDLE cbv_handle[2];
 		uint32_t frame_res_desc_offset = cur_back_buf_index_ * (1 + kMaxSceneObjectCount);
 		cbv_handle[0].ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + frame_res_desc_offset * cbv_srv_uav_desc_size_;
-		//SetPerFrameShaderParameters();
+		SetPerFrameShaderParameters();
 
 		p_cmdlist_->SetGraphicsRootDescriptorTable(0, cbv_handle[0]);
 		p_cmdlist_->RSSetViewports(1, &vp_);
@@ -450,7 +457,7 @@ namespace Engine
 			SetPerBatchShaderParameters(i);
 			cbv_handle[1].ptr = cbv_handle[0].ptr + cbv_srv_uav_desc_size_ * (i + 1);
 			p_cmdlist_->SetGraphicsRootDescriptorTable(1, cbv_handle[1]);
-			p_cmdlist_->IASetVertexBuffers(0, 1, &vertex_buf_view_[0]);
+			p_cmdlist_->IASetVertexBuffers(0, 1, &vertex_buf_view_[i]);
 			// select which index buffer to use
 			p_cmdlist_->IASetIndexBuffer(&index_buf_view_[i]);
 			// draw the vertex buffer to the back buffer

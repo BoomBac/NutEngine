@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "Framework/Parser/FbxParser.h"
 
+#include <future>
+
 using namespace Engine;
 
 using std::string;
@@ -40,17 +42,31 @@ unique_ptr<Scene> Engine::FbxParser::Parse(const std::string& buf)
 	unique_ptr<Scene> nut_scene(new Scene("Fbx Scene"));
 	std::shared_ptr<BaseSceneNode> root_node = make_shared<BaseSceneNode>("scene_root");
 	FbxNode* fbx_rt = fbx_scene->GetRootNode();
+	//Convert Scene
+	fbxsdk::FbxAxisSystem::DirectX.DeepConvertScene(fbx_scene);
+	if(fbx_scene->GetGlobalSettings().GetSystemUnit() != fbxsdk::FbxSystemUnit::cm)
+	{
+		const FbxSystemUnit::ConversionOptions lConversionOptions = {
+		false, /* mConvertRrsNodes */
+		true, /* mConvertAllLimits */
+		true, /* mConvertClusters */
+		true, /* mConvertLightIntensity */
+		true, /* mConvertPhotometricLProperties */
+		true  /* mConvertCameraClipPlanes */
+		};
+		fbxsdk::FbxSystemUnit::cm.ConvertScene(fbx_scene, lConversionOptions);
+	}
 	if (fbx_rt != nullptr)
 	{
 		for (int i = 0; i < fbx_rt->GetChildCount(); i++) {
-			ConvertFbxConstructToSceneNode(fbx_rt->GetChild(i), root_node,*nut_scene);
+			ConvertFbxConstructToSceneNode(fbx_rt->GetChild(i), root_node,*nut_scene,fbx_scene);
 		}
 	}
 	fbx_scene->Destroy();
 	return nut_scene;
 }
 
-void Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, std::shared_ptr<BaseSceneNode>& base_node, Scene& scene)
+void Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, std::shared_ptr<BaseSceneNode>& base_node, Scene& scene, fbxsdk::FbxScene* fbx_scene)
 {
 	std::shared_ptr<BaseSceneNode> node;
 	string object_name = object->GetName();
@@ -72,9 +88,12 @@ void Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, 
 	{
 		auto _node = std::make_shared<SceneCameraNode>(object_name);
 		const fbxsdk::FbxCamera* _camera = FbxCast<fbxsdk::FbxCamera>(attribute);
-		_node->AddSceneObjectRef(object_name);
 		scene.CameraNodes.emplace(object_name, _node);
 		node = _node;
+		const fbxsdk::FbxCamera* camera = FbxCast<fbxsdk::FbxCamera>(attribute);
+		_node->AddSceneObjectRef(camera->GetName());
+		GenerateCamera(camera,scene);	
+		_node->AppendChild(GenerateTransform(object));
 	}
 	break;
 	case FbxNodeAttribute::EType::eMesh:
@@ -98,8 +117,9 @@ void Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, 
 		geometry->SetVisibility(_node->Visible());
 		geometry->SetIfCastShadow(_node->CastShadow());
 		geometry->SetIfMotionBlur(true);
-		_node->AppendChild(GenerateTransform(object));
+		auto object_transf = std::async(&FbxParser::GenerateTransform,this,object);
 		GenerateMesh(geometry, _mesh, scene);
+		_node->AppendChild(object_transf.get());
 	}
 	break;
 	case FbxNodeAttribute::EType::eNurbs: {}break;
@@ -110,7 +130,7 @@ void Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, 
 	}
 	base_node->AppendChild(std::move(node));
 	for(int32_t i = 0; i < object->GetChildCount(); i++) {
-		ConvertFbxConstructToSceneNode(object->GetChild(i),node,scene);
+		ConvertFbxConstructToSceneNode(object->GetChild(i),node,scene, fbx_scene);
 	}
 }
 
@@ -138,7 +158,36 @@ std::shared_ptr<SceneObjectTransform> Engine::FbxParser::GenerateTransform(fbxsd
 		for (int32_t j = 0; j < 4; ++j)
 			res[i][j] = localMatrix.Get(i,j);
 	}
+	//RH y-up ->LH z-up
+	//std::swap(res[1][0],res[2][0]);
+	//std::swap(res[1][1],res[2][1]);
+	//std::swap(res[1][2],res[2][2]);
+	//std::swap(res[1][3],res[2][3]);
+	//std::swap(res[0][1], res[0][2]);
+	//std::swap(res[1][1], res[1][2]);
+	//std::swap(res[2][1], res[2][2]);
+	//std::swap(res[3][1], res[3][2]);
 	return make_shared<SceneObjectTransform>(res);
+}
+
+
+void Engine::FbxParser::GenerateCamera(const fbxsdk::FbxCamera* camera, Scene& scene)
+{
+	string camera_name = camera->GetName();
+	float fov = camera->FieldOfView.Get() * kPi / 360.F;
+	float aspect = camera->AspectWidth.Get() / camera->AspectHeight.Get();
+	std::shared_ptr<SceneObjectCamera> _camera;
+	if(camera->ProjectionType.Get() == fbxsdk::FbxCamera::EProjectionType::eOrthogonal) {
+		_camera = make_shared<SceneObjectOrthogonalCamera>();
+	}
+	else {
+		_camera = make_shared<SceneObjectPerspectiveCamera>();
+		_camera->SetParam("fov", fov);
+	}
+	_camera->SetParam("near",static_cast<float>(camera->GetNearPlane()));
+	_camera->SetParam("far", static_cast<float>(camera->GetFarPlane()));
+	_camera->SetParam("aspect", aspect);
+	scene.Cameras[camera_name] = _camera;
 }
 
 void Engine::FbxParser::GenerateMaterial(const fbxsdk::FbxSurfaceMaterial* mat, Scene& scene)
@@ -202,12 +251,12 @@ void FbxParser::GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::F
 	void* vertex_buf = new float[vertex_count * 3];
 	fbxsdk::FbxVector4* points = mesh->GetControlPoints();
 	int32_t ctl_point_index = 0;
-	for(int32_t i = 0; i < vertex_count; ++i)
+	for (int32_t i = 0; i < vertex_count; ++i) 
 	{
 		for (int32_t j = 0; j < 3; ++j)
 		{
 			reinterpret_cast<float*>(vertex_buf)[i * 3 + j] = points[i].mData[j];
-		}	
+		}
 	}
 	EVertexDataType vertex_type = EVertexDataType::kVertexDataFloat3;
 	SceneObjectVertexArray& _v_array = *new SceneObjectVertexArray("", 0u, vertex_type, vertex_buf, trangle_count);

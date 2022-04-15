@@ -176,6 +176,7 @@
     <ClInclude Include="Inc\Framework\Common\GfxConfiguration.h" />
     <ClInclude Include="Inc\Framework\Common\GraphicsManager.h" />
     <ClInclude Include="Inc\Framework\Common\Image.h" />
+    <ClInclude Include="Inc\Framework\Common\InputManager.h" />
     <ClInclude Include="Inc\Framework\Common\SceneManager.h" />
     <ClInclude Include="Inc\Framework\Common\MemoryManager.hpp" />
     <ClInclude Include="Inc\Framework\Common\Scene.h" />
@@ -206,9 +207,11 @@
     <ClCompile Include="Src\Framework\Common\AssetLoader.cpp" />
     <ClCompile Include="Src\Framework\Common\BaseApplication.cpp" />
     <ClCompile Include="Src\Framework\Common\GraphicsManager.cpp" />
+    <ClCompile Include="Src\Framework\Common\InputManager.cpp" />
     <ClCompile Include="Src\Framework\Common\SceneManager.cpp" />
     <ClCompile Include="Src\Framework\Common\MemoryManager.cpp" />
     <ClCompile Include="Src\Framework\Common\Scene.cpp" />
+    <ClCompile Include="Src\Framework\Common\SceneObject.cpp" />
     <ClCompile Include="Src\Framework\Math\Guid.cpp" />
     <ClCompile Include="Src\Framework\Parser\FbxParser.cpp" />
     <ClCompile Include="Src\RHI\D3D12GraphicsManager.cpp" />

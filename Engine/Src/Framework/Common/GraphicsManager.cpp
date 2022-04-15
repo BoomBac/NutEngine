@@ -41,6 +41,28 @@ void Engine::GraphicsManager::Draw()
 {
 
 }
+void Engine::GraphicsManager::WorldRotateY(float radius)
+{
+    Matrix4x4f m;
+    MatrixRotationZ(m,radius);
+    draw_frame_context_.world_matrix_ = draw_frame_context_.world_matrix_ * m;
+}
+void Engine::GraphicsManager::MoveCameraForward(float distance)
+{
+    p_camera_->MoveForward(distance);
+}
+void Engine::GraphicsManager::MoveCameraRight(float distance)
+{
+    p_camera_->MoveRight(distance);
+}
+void Engine::GraphicsManager::CameraRotateYaw(float angle)
+{
+    p_camera_->RotateYaw(AngleToRadius(angle));
+}
+void Engine::GraphicsManager::CameraRotatePitch(float angle)
+{
+    p_camera_->RotatePitch(AngleToRadius(angle));
+}
 #ifdef DEBUG
 void Engine::GraphicsManager::DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color)
 {
@@ -105,7 +127,7 @@ void Engine::GraphicsManager::CalculateCameraMatrix()
     else {
         // use default build-in camera
         Vector3f position = { 0, -5, 0 }, lookAt = { 0, 0, 0 }, up = { 0, 0, 1 };
-        BuildViewLHMatrix(draw_frame_context_.view_matrix_, position, lookAt, up);
+        BuildViewMatrixLookAtLH(draw_frame_context_.view_matrix_, position, lookAt, up);
     }
     float fieldOfView = kPi / 2.0f;
     float nearClipDistance = 1.0f;
