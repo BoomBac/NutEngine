@@ -49,19 +49,19 @@ void Engine::GraphicsManager::WorldRotateY(float radius)
 }
 void Engine::GraphicsManager::MoveCameraForward(float distance)
 {
-    p_camera_->MoveForward(distance);
+   p_cam_mgr_->AddPositionOffset(0.f,0.f,distance);
 }
 void Engine::GraphicsManager::MoveCameraRight(float distance)
 {
-    p_camera_->MoveRight(distance);
+    p_cam_mgr_->AddPositionOffset(distance, 0.f, 0.f);
 }
 void Engine::GraphicsManager::CameraRotateYaw(float angle)
 {
-    p_camera_->RotateYaw(AngleToRadius(angle));
+    p_cam_mgr_->GetCamera().RotateYaw(AngleToRadius(angle)); //->RotateYaw(AngleToRadius(angle));
 }
 void Engine::GraphicsManager::CameraRotatePitch(float angle)
 {
-    p_camera_->RotatePitch(AngleToRadius(angle));
+    p_cam_mgr_->GetCamera().RotatePitch(AngleToRadius(angle));
 }
 #ifdef DEBUG
 void Engine::GraphicsManager::DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color)

@@ -11,9 +11,6 @@ constexpr float kDPi = kPi * 2.f;
 
 namespace Engine
 {
-	static float AngleToRadius(const float& angle) {return angle * kPi / 180.f;}
-	static float RadiusToAngle(const float& radius) {return 180.f * radius / kPi;}
-
 	template<typename T, size_t size_of_arr>
 	constexpr size_t CountOf(T(&)[size_of_arr]) { return size_of_arr; }
 
@@ -425,7 +422,7 @@ namespace Engine
 			{ xAxis.x, yAxis.x, zAxis.x, 0.0f },
 			{ xAxis.y, yAxis.y, zAxis.y, 0.0f },
 			{ xAxis.z, yAxis.z, zAxis.z, 0.0f },
-			{ DotProduct(xAxis, -position), DotProduct(yAxis, -position), DotProduct(zAxis, -position), 1.0f }
+			{ -DotProduct(xAxis, position), -DotProduct(yAxis, position), -DotProduct(zAxis, position), 1.0f }
 		}} };
 		return result;
 	}
@@ -600,6 +597,23 @@ namespace Engine
 		matrix = rotation;
 	}
 
+	static float AngleToRadius(const float& angle) { return angle * kPi / 180.f; }
+	static float RadiusToAngle(const float& radius) { return 180.f * radius / kPi; }
+	template<typename V>
+	static V lerp(const V& src,const V& des,const float& weight)
+	{		
+		V res{};
+		for (uint32_t i = 0; i < CountOf(src.data); i++)
+		{
+			res[i] = (1.f - weight) * src[i] +  weight * des[i];
+		}
+		return res;
+	}
+	template<>
+	static float lerp(const float& src, const float& des, const float& weight)
+	{
+		return (1.f - weight) * src + weight * des;
+	}
 }
 
 #endif // NUT_MATH_H

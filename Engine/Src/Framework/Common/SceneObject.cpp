@@ -40,6 +40,20 @@ namespace Engine
 	{
 		return far_plane_height_;
 	}
+	void SceneObjectCamera::SetPosition(const float& x, const float& y, const float& z)
+	{
+		position_.x = x;
+		position_.y = y;
+		position_.z = z;
+		b_dirty_ = true;
+		UpdateViewMatrix();
+	}
+	void SceneObjectCamera::SetPosition(const Vector3f& new_pos)
+	{
+		position_ = new_pos;
+		b_dirty_ = true;
+		UpdateViewMatrix();
+	}
 	void SceneObjectCamera::MoveForward(float dis)
 	{
 		Vector3f dx = DotProduct(forawrd_,Vector3f{ dis,0.f,0.f});

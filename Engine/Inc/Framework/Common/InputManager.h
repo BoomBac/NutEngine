@@ -1,5 +1,7 @@
 #pragma once
 #include "Framework/Interface/IRuntimeModule.h"
+#include <thread>
+
 
 namespace Engine
 {
@@ -30,9 +32,12 @@ namespace Engine
 		void ButtonDown(EKeyButton btn);
 		void ButtonUp(EKeyButton btn);
 		void MouseMove(const MouseMoveEvent& ev);
-		void SetPreMousePos(int32_t x, int32_t y);
+		void SetPreMousePos(int x, int y);
+		void ProcessInput(MouseMoveEvent* ev);
 	private:
 		int16_t pre_mouse_pos[2];
+		MouseMoveEvent cur_mouse_ev_;
+		std::thread thread_input_handler_;
 	};
 	extern InputManager* g_InputManager;
 }

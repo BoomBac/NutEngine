@@ -245,29 +245,88 @@ void FbxParser::GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::F
 		fbxsdk::FbxGeometryConverter convert(fbx_manager_);
 		mesh = FbxCast<fbxsdk::FbxMesh>(convert.Triangulate(mesh, true));
 	}
+	ReadNormal(mesh, nut_mesh);
+	ReadVertex(mesh,nut_mesh);
+
+	geo->AddMesh(nut_mesh);
+	scene.Geometries[mesh->GetName()] = geo;
+}
+
+void Engine::FbxParser::ReadNormal(fbxsdk::FbxMesh* mesh, std::shared_ptr<SceneObjectMesh> nut_mesh)
+{
+	if (mesh->GetElementNormalCount() < 1) return;
+	auto* normals = mesh->GetElementNormal(0);
+	int vertex_count = mesh->GetControlPointsCount(), data_size = 0;
+	void* data = nullptr;
+	std::vector<Vector3f> temp_v;
+	if (normals->GetMappingMode() == fbxsdk::FbxLayerElement::EMappingMode::eByControlPoint)
+	{
+		data = new float[vertex_count * 3];
+		for (int i = 0; i < vertex_count; ++i)
+		{
+			int normal_index = 0;
+			if (normals->GetReferenceMode() == fbxsdk::FbxLayerElement::EReferenceMode::eDirect)
+				normal_index = i;
+			else if (normals->GetReferenceMode() == fbxsdk::FbxLayerElement::EReferenceMode::eIndexToDirect)
+				normal_index = normals->GetIndexArray().GetAt(i);
+			auto normal = normals->GetDirectArray().GetAt(normal_index);
+			Vector3f n{ (float)normal[0],(float)normal[1],(float)normal[2] };
+			reinterpret_cast<float*>(data)[i * 3] = normals->GetDirectArray().GetAt(normal_index)[0];
+			reinterpret_cast<float*>(data)[i * 3 + 1] = normals->GetDirectArray().GetAt(normal_index)[1];
+			reinterpret_cast<float*>(data)[i * 3 + 2] = normals->GetDirectArray().GetAt(normal_index)[2];
+			temp_v.push_back(n);
+		}
+	}
+	else if (normals->GetMappingMode() == fbxsdk::FbxLayerElement::EMappingMode::eByPolygonVertex)
+	{
+		int trangle_count = mesh->GetPolygonCount();
+		vertex_count = trangle_count * 3;
+		data = new float[vertex_count * 3];
+		int cur_vertex_id = 0;
+		for (int i = 0; i < trangle_count; ++i)
+		{
+			for (int j = 0; j < 3; ++j)
+			{
+				int normal_index = 0;
+				if (normals->GetReferenceMode() == fbxsdk::FbxLayerElement::EReferenceMode::eDirect)
+					normal_index = cur_vertex_id;
+				else if (normals->GetReferenceMode() == fbxsdk::FbxLayerElement::EReferenceMode::eIndexToDirect)
+					normal_index = normals->GetIndexArray().GetAt(cur_vertex_id);
+				auto normal = normals->GetDirectArray().GetAt(normal_index);
+				Vector3f n{ (float)normal[0],(float)normal[1],(float)normal[2] };
+				reinterpret_cast<float*>(data)[cur_vertex_id * 3] = normals->GetDirectArray().GetAt(normal_index)[0];
+				reinterpret_cast<float*>(data)[cur_vertex_id * 3 + 1] = normals->GetDirectArray().GetAt(normal_index)[1];
+				reinterpret_cast<float*>(data)[cur_vertex_id * 3 + 2] = normals->GetDirectArray().GetAt(normal_index)[2];
+				temp_v.push_back(n);
+				++cur_vertex_id;
+			}
+		}
+	}
+	SceneObjectVertexArray& _v_array = *new SceneObjectVertexArray(EVertexArrayType::kVertex, 0u, EVertexDataType::kVertexDataFloat3,
+		data, vertex_count);
+	nut_mesh->AddVertexArray(std::move(_v_array));
+}
+
+void Engine::FbxParser::ReadVertex(fbxsdk::FbxMesh* mesh, std::shared_ptr<SceneObjectMesh> nut_mesh)
+{
 	int32_t trangle_count = mesh->GetPolygonCount();
-	int32_t vertex_count = mesh->GetControlPointsCount();
+	int32_t vertex_count = trangle_count * 3;
 	//TODO:Here the vertex and index buffers are not freed and can cause memory leaks
 	void* vertex_buf = new float[vertex_count * 3];
 	fbxsdk::FbxVector4* points = mesh->GetControlPoints();
-	int32_t ctl_point_index = 0;
-	for (int32_t i = 0; i < vertex_count; ++i) 
+	int32_t point_index = 0, cur_index_count = 0;
+	for (int32_t i = 0; i < trangle_count; ++i)
 	{
 		for (int32_t j = 0; j < 3; ++j)
 		{
-			reinterpret_cast<float*>(vertex_buf)[i * 3 + j] = points[i].mData[j];
+			point_index = mesh->GetPolygonVertex(i, j);
+			reinterpret_cast<float*>(vertex_buf)[cur_index_count * 3] = points[point_index].mData[0];
+			reinterpret_cast<float*>(vertex_buf)[cur_index_count * 3 + 1] = points[point_index].mData[1];
+			reinterpret_cast<float*>(vertex_buf)[cur_index_count * 3 + 2] = points[point_index].mData[2];
+			++cur_index_count;
 		}
 	}
 	EVertexDataType vertex_type = EVertexDataType::kVertexDataFloat3;
-	SceneObjectVertexArray& _v_array = *new SceneObjectVertexArray("", 0u, vertex_type, vertex_buf, trangle_count);
+	SceneObjectVertexArray& _v_array = *new SceneObjectVertexArray(EVertexArrayType::kNormal, 0u, vertex_type, vertex_buf, vertex_count);
 	nut_mesh->AddVertexArray(std::move(_v_array));
-	size_t in_buf_size = sizeof(int32_t) * trangle_count * 3;
-	void* index_buf =  new int32_t[trangle_count * 3];
-	memcpy(index_buf, mesh->GetPolygonVertices(),in_buf_size);
-	EIndexDataType index_type = EIndexDataType::kIndexData32i;
-	SceneObjectIndexArray& _i_array = *new SceneObjectIndexArray(0,0,index_type, index_buf,trangle_count * 3);
-	nut_mesh->AddIndexArray(std::move(_i_array));
-	float* fp = reinterpret_cast<float*>(vertex_buf);
-	geo->AddMesh(nut_mesh);
-	scene.Geometries[mesh->GetName()] = geo;
 }

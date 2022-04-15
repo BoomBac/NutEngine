@@ -141,6 +141,9 @@
     <ClInclude Include="Inc\Framework\Common\InputManager.h">
       <Filter>Inc\Framework\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\CameraManager.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -191,14 +194,11 @@
     <ClCompile Include="Src\Framework\Common\SceneObject.cpp">
       <Filter>Src\Framework\Common</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Framework\Common\CameraManager.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Asset\Shader\simple_vs.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Asset\Shader\simple_ps.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Asset\Shader\vs.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>

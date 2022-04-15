@@ -2,6 +2,7 @@
 #include "Framework/Interface/IRuntimeModule.h"
 #include "SceneManager.h"
 #include "Framework/Math/NutMath.hpp"
+#include "Framework/Common/CameraManager.h"
 
 
 namespace Engine 
@@ -49,7 +50,7 @@ namespace Engine
 		};
 		DrawFrameContext    draw_frame_context_;
 		//temp
-		std::unique_ptr<SceneObjectPerspectiveCamera> p_camera_;
+		std::unique_ptr<CameraManager> p_cam_mgr_;
 	};
 	extern GraphicsManager* g_pGraphicsManager;
 }

@@ -3,11 +3,12 @@
 struct PSInput
 {
 	float4 position : SV_POSITION;
-	float4 color : COLOR;
+	float3 normal : NORMAL;
 };
-struct VSInput
+struct VSOutput
 {
-	float4 position : POSITIONT;
+	float4 position : SV_POSITION;
+	float3 normal : NORMAL;
 };
 cbuffer DrawFrameContext : register(b0)
 {

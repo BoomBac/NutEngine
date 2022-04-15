@@ -22,17 +22,21 @@ using Engine::g_pGraphicsManager;
 using Engine::g_pMemoryManager;
 using Engine::g_pAssetLoader;
 using Engine::g_pSceneManager;
+using Engine::g_InputManager;
 
 int main(int argc, char *argv[])
 {
     g_pApp->Initialize();
     g_pMemoryManager->Initialize();
     g_pAssetLoader->Initialize();
-    g_pAssetLoader->AddSearchPath("H:/Project_VS2019/NutEngine/Engine");
 
+    g_pAssetLoader->AddSearchPath("H:/Project_VS2019/NutEngine/Engine");
     auto p_main_window = dynamic_cast<QTApplication*>(g_pApp)->GetMainWindow();
     g_pSceneManager->LoadScene("box.fbx");
     g_pGraphicsManager->Initialize();
+    g_InputManager->Initialize();
+
+
     while (p_main_window->isVisible())
     {
         g_pApp->Tick();
@@ -41,7 +45,7 @@ int main(int argc, char *argv[])
     }
     g_pApp->Finalize();
     g_pGraphicsManager->Finalize();
-
+    g_InputManager->Finalize();
     g_pMemoryManager->Finalize();
     g_pAssetLoader->Finalize();
     

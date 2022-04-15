@@ -1,6 +1,6 @@
 #include "type.hlsli"
 
-float4 main() : SV_TARGET
+float4 main(PSInput input) : SV_TARGET
 {
-	return float4(g_color_, 0.0f, 0.0f, 1.0f);
+	return float4(input.normal,1.f);
 }

@@ -54,6 +54,12 @@ namespace Engine
         kPrimitiveTypeQuadStrip,   ///< For N>=0, vertices [N*2+0, N*2+1, N*2+3] and [N*2+0, N*2+3, N*2+2] render triangles.
         kPrimitiveTypePolygon     ///< For N>=0, vertices [0, N+1, N+2] render a triangle.
     };
+    enum class EVertexArrayType
+    {
+        kVertex,
+        kNormal,
+        kUVs
+    };
 
     class BaseSceneObject
     {
@@ -80,9 +86,9 @@ namespace Engine
     class SceneObjectVertexArray
     {
     public:
-        SceneObjectVertexArray(const char* attr = "", const uint32_t morph_index = 0, const EVertexDataType data_type = EVertexDataType::kVertexDataFloat3, 
-            const void* data = nullptr, const size_t data_size = 0) :
-            attribute_(attr), morph_target_index_(morph_index), data_type_(data_type),p_data_(data), size_(data_size) {};
+        SceneObjectVertexArray(EVertexArrayType type, const uint32_t morph_index = 0, const EVertexDataType data_type = EVertexDataType::kVertexDataFloat3, 
+            const void* data = nullptr, const size_t data_size = 0) : type_(type),
+             morph_target_index_(morph_index), data_type_(data_type),p_data_(data), size_(data_size) {};
         SceneObjectVertexArray(SceneObjectVertexArray& arr) = default;
         SceneObjectVertexArray(SceneObjectVertexArray && arr) = default;
         size_t GetDataSize() const
@@ -117,8 +123,9 @@ namespace Engine
         {
             return size_;
         }
+        EVertexArrayType GetType() const {return type_;}
     protected:
-        const std::string attribute_;
+        EVertexArrayType type_;
         const uint32_t    morph_target_index_;
         const EVertexDataType data_type_;
         const void* p_data_;
@@ -407,6 +414,12 @@ namespace Engine
         float GetFarPlaneHeight() const;
         const Matrix4x4f& GetProjection() const { return projection_; }
         const Matrix4x4f& GetView() const { return view_; }
+        void SetPosition(const float& x, const float& y, const float& z);
+        void SetPosition(const Vector3f& new_pos);
+        const Vector3f& GetPosition() const {return position_;};
+        const Vector3f& GetForward() const {return forawrd_;};
+        const Vector3f& GetRight() const {return right_;};
+        const Vector3f& GetUp() const {return up_;};
         void MoveForward(float dis);
         void MoveRight(float dis);
         void RotatePitch(float angle);
@@ -438,7 +451,7 @@ namespace Engine
     protected:
     public:
         SceneObjectPerspectiveCamera(float aspect = 16.0f / 9.0f, float near_clip = 10.0f, float far_clip = 10000.0f, 
-            float fov = kPi / 2.0) : SceneObjectCamera(aspect, near_clip, far_clip)
+            float fov = 1.57F) : SceneObjectCamera(aspect, near_clip, far_clip)
         {
             fov_ = fov;
         };
