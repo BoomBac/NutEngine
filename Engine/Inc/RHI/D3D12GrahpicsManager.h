@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../../pch.h"
+#include <DirectXMath.h>
 #include "Framework/Common/GraphicsManager.h"
 #include "Framework/Common/SceneObject.h"
 
@@ -10,19 +11,24 @@ namespace Engine
 {
     class D3d12GraphicsManager : public GraphicsManager
     {
+        //
         struct DrawBatchContext 
         {
+            Matrix4x4f object_matrix;
+            Matrix4x4f normal_matrix;
             int32_t count;
-            std::shared_ptr<Matrix4x4f> transform;
-            std::shared_ptr<SceneObjectMaterial> material;
+            float color;
+            //std::shared_ptr<Matrix4x4f> transform;
+            //std::shared_ptr<SceneObjectMaterial> material;
+            //DirectX::XMMATRIX  m_modelViewProjection;       
         };
-
     public:
         int Initialize() override;
         void Finalize() override;
         void Tick() override;
         void Clear() override;
         void Draw() override;
+        void Update();
     protected:
         bool SetPerFrameShaderParameters();
         bool SetPerBatchShaderParameters(int32_t index);
@@ -38,7 +44,9 @@ namespace Engine
         HRESULT CreateTextureBuffer();
         HRESULT CreateConstantBuffer();
         HRESULT CreateIndexBuffer(const SceneObjectIndexArray& index_array);
-        HRESULT CreateVertexBuffer(const SceneObjectVertexArray& v_property_array);
+        HRESULT CreateIndexBuffer();
+        HRESULT CreateVertexBuffer(const SceneObjectVertexArray& vertex_array);
+        HRESULT CreateVertexBuffer();
         HRESULT CreateRootSignature();
         HRESULT WaitForPreviousFrame();
         HRESULT PopulateCommandList();
@@ -48,13 +56,14 @@ namespace Engine
         static constexpr uint32_t           kMaxSceneObjectCount = 65535;
         static constexpr uint32_t           kMaxTextureCount = 2048;
         static constexpr uint32_t		    kTextureDescStartIndex = kFrameCount * (1 + kMaxSceneObjectCount);
+        static constexpr FLOAT              kBackColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
         
         ComPtr<ID3D12Device> p_device_ = nullptr;             // the pointer to our Direct3D device interface
         D3D12_VIEWPORT                  vp_;                         // viewport structure
         D3D12_RECT                      rect_;                      // scissor rect structure
         ComPtr<ID3D12Resource> p_ds_buffer_ = nullptr;
         ComPtr<IDXGISwapChain3> p_swapchain = nullptr;             // the pointer to the swap chain interface
-        ComPtr<ID3D12Resource> p_rt_[kFrameCount];      // the pointer to rendering buffer. [descriptor]
+        ComPtr<ID3D12Resource> render_target_arr_[kFrameCount];      // the pointer to rendering buffer. [descriptor]
         ComPtr<ID3D12CommandAllocator> p_cmdalloc_ = nullptr;      // the pointer to command buffer allocator
         ComPtr<ID3D12CommandQueue> p_cmdqueue_ = nullptr;          // the pointer to command queue
         ComPtr<ID3D12RootSignature> p_rootsig_ = nullptr;         // a graphics root signature defines what resources are bound to the pipeline
@@ -69,6 +78,7 @@ namespace Engine
 
         uint32_t                        rtv_desc_size_;
         uint32_t                        cbv_srv_uav_desc_size_;
+        uint32_t                        vertex_buf_per_frame_num_;
 
         ComPtr<ID3D12Resource> p_vertex_buf_ = nullptr;          // the pointer to the vertex buffer
         std::vector<ComPtr<ID3D12Resource>>    buffers_;                          // the pointer to the vertex buffer
@@ -77,12 +87,12 @@ namespace Engine
         std::vector<DrawBatchContext> draw_batch_context_;
         ComPtr<ID3D12Resource> p_texture_buf_;
         uint8_t* p_cbv_data_begin_ = nullptr;
-        static constexpr size_t				kSizePerFrameConstantBuffer = (sizeof(DrawBatchContext) + 255) & 256; // CB size is required to be 256-byte aligned.
-        static constexpr size_t				kSizePerBatchConstantBuffer = (sizeof(DrawBatchContext) + 255) & 256; // CB size is required to be 256-byte aligned.
+        // CB size is required to be 256-byte aligned.
+        static constexpr size_t				kSizePerBatchConstantBuffer = (sizeof(DrawBatchContext) + 255) & 256; 
+        static constexpr size_t				kSizePerFrameConstantBuffer = (sizeof(DrawFrameContext) + 255) & 256; // CB size is required to be 256-byte aligned.
         static constexpr size_t				kSizeConstantBufferPerFrame = kSizePerFrameConstantBuffer + kSizePerBatchConstantBuffer * kMaxSceneObjectCount;
-
         // Synchronization objects
-        uint32_t                        frame_index_;
+        uint32_t                        cur_back_buf_index_;
         HANDLE                          fence_event_;
         ComPtr<ID3D12Fence> p_fence_ = nullptr;
         uint32_t                        fence_value_;

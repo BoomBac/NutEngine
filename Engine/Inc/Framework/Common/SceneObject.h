@@ -54,6 +54,12 @@ namespace Engine
         kPrimitiveTypeQuadStrip,   ///< For N>=0, vertices [N*2+0, N*2+1, N*2+3] and [N*2+0, N*2+3, N*2+2] render triangles.
         kPrimitiveTypePolygon     ///< For N>=0, vertices [0, N+1, N+2] render a triangle.
     };
+    enum class EVertexArrayType
+    {
+        kVertex,
+        kNormal,
+        kUVs
+    };
 
     class BaseSceneObject
     {
@@ -80,27 +86,30 @@ namespace Engine
     class SceneObjectVertexArray
     {
     public:
-        SceneObjectVertexArray(const char* attr = "", const uint32_t morph_index = 0, const EVertexDataType data_type = EVertexDataType::kVertexDataFloat3, 
-            const void* data = nullptr, const size_t data_size = 0) :
-            attribute_(attr), morph_target_index_(morph_index), data_type_(data_type),p_data_(data), size_(data_size) {};
+        SceneObjectVertexArray(EVertexArrayType type, const uint32_t morph_index = 0, const EVertexDataType data_type = EVertexDataType::kVertexDataFloat3, 
+            const void* data = nullptr, const size_t data_size = 0) : type_(type),
+             morph_target_index_(morph_index), data_type_(data_type),p_data_(data), size_(data_size) {};
         SceneObjectVertexArray(SceneObjectVertexArray& arr) = default;
         SceneObjectVertexArray(SceneObjectVertexArray && arr) = default;
         size_t GetDataSize() const
         {
             size_t size = size_;
-
             switch (data_type_) {
             case EVertexDataType::kVertexDataFloat1:
             case EVertexDataType::kVertexDataFloat2:
             case EVertexDataType::kVertexDataFloat3:
+                size *= sizeof(float) * 3;
+                break;
             case EVertexDataType::kVertexDataFloat4:
-                size *= sizeof(float);
+                size *= sizeof(float) * 4;
                 break;
             case EVertexDataType::kVertexDataDouble1:
             case EVertexDataType::kVertexDataDouble2:
             case EVertexDataType::kVertexDataDouble3:
+                size *= sizeof(float) * 3;
+                break;
             case EVertexDataType::kVertexDataDouble4:
-                size *= sizeof(double);
+                size *= sizeof(double) * 4;
                 break;
             default:
                 size = 0;
@@ -112,45 +121,15 @@ namespace Engine
         const void* GetData() const { return p_data_; }
         size_t GetVertexCount() const
         {
-            size_t size = size_;
-
-            switch (data_type_) {
-            case EVertexDataType::kVertexDataFloat1:
-                size /= 1;
-                break;
-            case EVertexDataType::kVertexDataFloat2:
-                size /= 2;
-                break;
-            case EVertexDataType::kVertexDataFloat3:
-                size /= 3;
-                break;
-            case EVertexDataType::kVertexDataFloat4:
-                size /= 4;
-                break;
-            case EVertexDataType::kVertexDataDouble1:
-                size /= 1;
-                break;
-            case EVertexDataType::kVertexDataDouble2:
-                size /= 2;
-                break;
-            case EVertexDataType::kVertexDataDouble3:
-                size /= 3;
-                break;
-            case EVertexDataType::kVertexDataDouble4:
-                size /= 4;
-                break;
-            default:
-                size = 0;
-                assert(0);
-                break;
-            }
-            return size;
+            return size_;
         }
+        EVertexArrayType GetType() const {return type_;}
     protected:
-        const std::string attribute_;
+        EVertexArrayType type_;
         const uint32_t    morph_target_index_;
         const EVertexDataType data_type_;
         const void* p_data_;
+        //represents the number of vertices, a vertex may consist of 3-4 float numbers
         size_t      size_;
     };
     class SceneObjectIndexArray
@@ -161,14 +140,16 @@ namespace Engine
             : material_index_(material_index), restart_index_(restart_index), data_type_(data_type), p_data_(data), size_(data_size) {};
         SceneObjectIndexArray(SceneObjectIndexArray& arr) = default;
         SceneObjectIndexArray(SceneObjectIndexArray && arr) = default;
-
+        ~SceneObjectIndexArray()
+        {
+            
+        }
         const uint32_t GetMaterialIndex() const { return material_index_; };
         const EIndexDataType GetIndexType() const { return data_type_; };
         const void* GetData() const { return p_data_; };
         size_t GetDataSize() const
         {
             size_t size = size_;
-
             switch (data_type_) {
             case EIndexDataType::kIndexData8i:
                 size *= sizeof(int8_t);
@@ -400,13 +381,65 @@ namespace Engine
     class SceneObjectCamera : public BaseSceneObject
     {
     public:
-        SceneObjectCamera() : BaseSceneObject(ESceneObjectType::kSceneObjectTypeCamera) {};
-        SceneObjectCamera(float aspect = 16.0f / 9.0f, float near_clip = 1.0f, float far_clip = 100.0f) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeCamera), 
-            fov_(aspect), near_clip_distance_(near_clip), far_clip_distance_(far_clip) {};
+        SceneObjectCamera() : BaseSceneObject(ESceneObjectType::kSceneObjectTypeCamera) 
+        {
+            UpdateViewMatrix();
+        };
+        SceneObjectCamera(float aspect, float near_clip = 10.0f, float far_clip = 10000.0f) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeCamera), 
+            aspect_(aspect), near_clip_distance_(near_clip), far_clip_distance_(far_clip) 
+        {
+            UpdateViewMatrix();
+        };
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="name">near,far,aspect,fov</param>
+        /// <param name="param"></param>
+        void SetParam(std::string name,float param)
+        {
+            if(name == "near") near_clip_distance_ = param;
+            else if(name == "far") far_clip_distance_ = param;
+            else if (name == "aspect") aspect_ = param;
+        }
+
+        void SetLens(float fovy,float aspect,float nz,float fz);
+        float GetNearZ() const { return near_clip_distance_; };
+        float GetFarZ() const { return far_clip_distance_; };
+        float GetAspect() const {return aspect_;};
+        float GetFovX() const;
+        float GetFovY() const;
+        float GetNearPlaneWidth() const;
+        float GetFarPlaneWidth() const;
+        float GetNearPlaneHeight() const;
+        float GetFarPlaneHeight() const;
+        const Matrix4x4f& GetProjection() const { return projection_; }
+        const Matrix4x4f& GetView() const { return view_; }
+        void SetPosition(const float& x, const float& y, const float& z);
+        void SetPosition(const Vector3f& new_pos);
+        const Vector3f& GetPosition() const {return position_;};
+        const Vector3f& GetForward() const {return forawrd_;};
+        const Vector3f& GetRight() const {return right_;};
+        const Vector3f& GetUp() const {return up_;};
+        void MoveForward(float dis);
+        void MoveRight(float dis);
+        void RotatePitch(float angle);
+        void RotateYaw(float angle);
     protected:
-        float fov_;
+        void UpdateViewMatrix();
+        Vector3f position_{ 0.f, 0.0f, -1000.f }; 
+        Vector3f forawrd_{ 0.0f, 0.0f, 1.f };
+        Vector3f up_{ 0.0f, 1.0f, 0.0f };
+        Vector3f right_{1.f,0.f,0.f};
+
+        bool b_dirty_ = true;
+        float aspect_;
         float near_clip_distance_;
         float far_clip_distance_;
+        float fov_;
+        float near_plane_height_;
+        float far_plane_height_;
+        Matrix4x4f view_{};
+        Matrix4x4f projection_{};
     };
     class SceneObjectOrthogonalCamera : public SceneObjectCamera
     {
@@ -416,11 +449,20 @@ namespace Engine
     class SceneObjectPerspectiveCamera : public SceneObjectCamera
     {
     protected:
-        float m_fFov;
-
     public:
-        SceneObjectPerspectiveCamera(float aspect = 16.0f / 9.0f, float near_clip = 1.0f, float far_clip = 100.0f, 
-            float fov = kPi / 2.0) : SceneObjectCamera(aspect, near_clip, far_clip), m_fFov(fov) {};
+        SceneObjectPerspectiveCamera(float aspect = 16.0f / 9.0f, float near_clip = 10.0f, float far_clip = 10000.0f, 
+            float fov = 1.57F) : SceneObjectCamera(aspect, near_clip, far_clip)
+        {
+            fov_ = fov;
+        };
+        void SetParam(std::string name, float param)
+        {
+            if(name == "fov")
+                fov_ = param;
+            else
+                SceneObjectCamera::SetParam(name,param);
+        }
+        float GetFov() const {return fov_;}
     };
 
     class SceneObjectTransform

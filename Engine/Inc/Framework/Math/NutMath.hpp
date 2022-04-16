@@ -18,22 +18,19 @@ namespace Engine
 	constexpr size_t CountOf(T(&)[row][col]) { return row * col; }
 
 	template<typename T>
-	constexpr float normalize(T var)
-	{
-		return var < 0 ? -static_cast<float>(var) / (std::numeric_limits<T>::min)()
-			: static_cast<float>(var) / (std::numeric_limits<T>::max)();
-	}
-	template<typename T>
-	void Normalize(T& var)
+	constexpr T Normalize(T& var)
 	{
 		size_t len = CountOf(var.data);
-		float temp[4];
+		double sum = 0.f;
+		T temp{};
 		for (uint32_t i = 0; i < len; i++)
-		{
-			temp[i] = normalize(var.data[i]);
-			var[i] = temp[i];
+			sum += pow(var[i],2.f);
+		sum = sqrt(sum);
+		for (uint32_t i = 0; i < len; i++) {
+			var[i] /= sum;
+			temp[i] = var[i];
 		}
-
+		return temp;
 	}
 
 	template <template<typename> class TT, typename T, int ... Indexes>
@@ -121,7 +118,7 @@ namespace Engine
 			Swizzle<Vector4D, T, 2, 1, 0, 3> bgra;
 		};
 
-		Vector4D<T>() {};
+		Vector4D<T>() {x = 0;y = 0;z=0;w=0;};
 		Vector4D<T>(const T& _v) : x(_v), y(_v), z(_v), w(_v) {};
 		Vector4D<T>(const T& _x, const T& _y, const T& _z, const T& _w) : x(_x), y(_y), z(_z), w(_w) {};
 		Vector4D<T>(const Vector3D<T>& v3) : x(v3.x), y(v3.y), z(v3.z), w(1.0f) {};
@@ -161,6 +158,16 @@ namespace Engine
 		}
 		return res;
 	}
+	template<template<typename> typename TT, typename T>
+	TT<T> operator*(const T& scalar,const TT<T>& v)
+	{
+		TT<T> res;
+		for (uint32_t i = 0; i < CountOf(v.data); i++)
+		{
+			res.data[i] = scalar * v.data[i];
+		}
+		return res;
+	}
 	/// <summary>
 	/// Any number of vector additions, with at least two parameters passed in
 	/// </summary>
@@ -168,6 +175,15 @@ namespace Engine
 	FF<F> VectorAdd(const FF<F> first, const TT<T>&... arg)
 	{
 		return (first + ... + arg);
+	}
+	template<template<typename> typename TT, typename T>
+	TT<T> operator-(TT<T>& v)
+	{
+		for (uint32_t i = 0; i < CountOf(v.data); i++)
+		{
+			v[i] = -v[i];
+		}
+		return v;
 	}
 	template<template<typename> typename TT, typename T>
 	TT<T> operator-(const TT<T> v1, const TT<T> v2)
@@ -301,6 +317,20 @@ namespace Engine
 	}
 
 	template<typename T, int rows, int cols>
+	Matrix<T, cols, rows> Transpose(Matrix<T, rows, cols>& mat)
+	{
+		Matrix<T, cols, rows> ret;
+		for (uint32_t i = 0; i < rows; i++)
+		{
+			for (uint32_t j = 0; j < cols; j++)
+			{
+				ret[j][i] = mat[i][j];
+			}
+		}
+		mat = ret;
+		return ret;
+	}
+	template<typename T, int rows, int cols>
 	Matrix<T, cols, rows> Transpose(const Matrix<T, rows, cols>& mat)
 	{
 		Matrix<T, cols, rows> ret;
@@ -317,23 +347,25 @@ namespace Engine
 	template <typename T, int Da, int Db, int Dc>
 	void MatrixMultipy(Matrix<T, Da, Dc>& ret, const Matrix<T, Da, Db>& m1, const Matrix<T, Dc, Db>& m2)
 	{
-		Matrix<T, Db, Dc> m2_t;
-		m2_t = Transpose(m2);
+		//Matrix<T, Db, Dc> m2_t;
+		//m2_t = Transpose(m2);
 		for (uint32_t i = 0; i < Da; i++)
 		{
 			for (uint32_t j = 0; j < Dc; j++)
 			{
 				for (uint32_t k = 0; k < Dc; k++)
-					ret[i][j] += m1[i][k] * m2_t[j][k];
+					ret[i][j] += m1[j][k] * m2[k][i];
 			}
 		}
+		Transpose(ret);
 	}
+
 	template <typename T, int row, int col>
 	Matrix<T, row, col> operator*(const Matrix<T, row, col>& m1, const Matrix<T, row, col>& m2)
 	{
-		Matrix<T, row, col> ret;
+		Matrix<T, row, col> ret{};
 		MatrixMultipy(ret, m1, m2);
-		return m1;
+		return ret;
 	}
 	static void MatrixRotationYawPitchRoll(Matrix4x4f& matrix, const float yaw, const float pitch, const float roll)
 	{
@@ -357,7 +389,7 @@ namespace Engine
 	}
 	static void Transform(Vector4f& vector, const Matrix4x4f& matrix)
 	{
-		Vector4f temp;
+		Vector4f temp{};
 		for (uint32_t i = 0; i < 4; i++)
 		{
 			for (uint32_t j = 0; j < 4; j++)
@@ -370,35 +402,53 @@ namespace Engine
 	}
 	static void TransformCoord(Vector3f& vector, const Matrix4x4f& matrix)
 	{
-		Vector4f temp;
+		Vector4f temp{vector,1.f};
 		Transform(temp, matrix);
 		vector[0] = temp[0];
 		vector[1] = temp[1];
 		vector[2] = temp[2];
+
 		return;
 	}
-	static void BuildViewMatrix(Matrix4x4f& result, const Vector3f position, const Vector3f lookAt, const Vector3f up)
+	static Matrix4x4f BuildViewMatrixLookToLH(Matrix4x4f& result, Vector3f position, Vector3f lookTo, Vector3f up)
 	{
 		Vector3f zAxis, xAxis, yAxis;
-		float result1, result2, result3;
+		zAxis = lookTo;
+		Normalize(zAxis);
+		xAxis = CrossProduct(up, zAxis);
+		Normalize(xAxis);
+		yAxis = CrossProduct(zAxis, xAxis);
+		result = { {{
+			{ xAxis.x, yAxis.x, zAxis.x, 0.0f },
+			{ xAxis.y, yAxis.y, zAxis.y, 0.0f },
+			{ xAxis.z, yAxis.z, zAxis.z, 0.0f },
+			{ -DotProduct(xAxis, position), -DotProduct(yAxis, position), -DotProduct(zAxis, position), 1.0f }
+		}} };
+		return result;
+	}
+	//https://stackoverflow.com/questions/349050/calculating-a-lookat-matrix
+	static Matrix4x4f BuildViewMatrixLookAtLH(Matrix4x4f& result,Vector3f position,Vector3f look_at,Vector3f up)
+	{
+		Vector3f zAxis, xAxis, yAxis;
+		zAxis = look_at - position;
+		return BuildViewMatrixLookToLH(result,position,zAxis,up);
+	}
+
+	static Matrix4x4f BuildViewRHMatrix(Matrix4x4f& result, Vector3f position, Vector3f lookAt, Vector3f up)
+	{
+		Vector3f zAxis, xAxis, yAxis;
 		zAxis = lookAt - position;
 		Normalize(zAxis);
 		xAxis = CrossProduct(up, zAxis);
 		Normalize(xAxis);
 		yAxis = CrossProduct(zAxis, xAxis);
-		result1 = DotProduct(xAxis, position);
-		result1 = -result1;
-		result2 = DotProduct(yAxis, position);
-		result2 = -result2;
-		result3 = DotProduct(zAxis, position);
-		result3 = -result3;
-		Matrix4x4f tmp = { {{
+		result = { {{
 			{ xAxis.x, yAxis.x, zAxis.x, 0.0f },
 			{ xAxis.y, yAxis.y, zAxis.y, 0.0f },
 			{ xAxis.z, yAxis.z, zAxis.z, 0.0f },
-			{ result1, result2, result3, 1.0f }
+			{ DotProduct(xAxis, -position), DotProduct(yAxis, -position), DotProduct(zAxis, -position), 1.0f }
 		}} };
-		result = tmp;
+		return result;
 	}
 	static void BuildIdentityMatrix(Matrix4x4f& matrix)
 	{
@@ -410,6 +460,16 @@ namespace Engine
 		}} };
 		matrix = identity;
 		return;
+	}
+	static Matrix4x4f BuildIdentityMatrix()
+	{
+		Matrix4x4f identity = { {{
+			{ 1.0f, 0.0f, 0.0f, 0.0f},
+			{ 0.0f, 1.0f, 0.0f, 0.0f},
+			{ 0.0f, 0.0f, 1.0f, 0.0f},
+			{ 0.0f, 0.0f, 0.0f, 1.0f}
+		}} };
+		return identity;
 	}
 	static void BuildPerspectiveFovLHMatrix(Matrix4x4f& matrix, const float fieldOfView, const float screenAspect, const float screenNear, const float screenDepth)
 	{
@@ -443,7 +503,16 @@ namespace Engine
 			{    x,    y,    z, 1.0f}
 		}} };
 		matrix = translation;
-		return;
+	}
+	static Matrix4x4f MatrixTranslation(const float x, const float y, const float z)
+	{
+		Matrix4x4f translation = { {{
+			{ 1.0f, 0.0f, 0.0f, 0.0f},
+			{ 0.0f, 1.0f, 0.0f, 0.0f},
+			{ 0.0f, 0.0f, 1.0f, 0.0f},
+			{    x,    y,    z, 1.0f}
+		}} };
+		return translation;
 	}
 	static void MatrixRotationX(Matrix4x4f& matrix, const float angle)
 	{
@@ -506,9 +575,17 @@ namespace Engine
 		{ 0.0f, 0.0f, 0.0f, 1.0f},
 		}} };
 		matrix = scale;
-		return;
 	}
-
+	static Matrix4x4f MatrixScale(const float x, const float y, const float z)
+	{
+		Matrix4x4f scale = { {{
+		{    x, 0.0f, 0.0f, 0.0f},
+		{ 0.0f,    y, 0.0f, 0.0f},
+		{ 0.0f, 0.0f,    z, 0.0f},
+		{ 0.0f, 0.0f, 0.0f, 1.0f},
+		}} };
+		return scale;
+	}
 	static void MatrixRotationQuaternion(Matrix4x4f& matrix, Quaternion q)
 	{
 		Matrix4x4f rotation = { {{
@@ -520,6 +597,23 @@ namespace Engine
 		matrix = rotation;
 	}
 
+	static float AngleToRadius(const float& angle) { return angle * kPi / 180.f; }
+	static float RadiusToAngle(const float& radius) { return 180.f * radius / kPi; }
+	template<typename V>
+	static V lerp(const V& src,const V& des,const float& weight)
+	{		
+		V res{};
+		for (uint32_t i = 0; i < CountOf(src.data); i++)
+		{
+			res[i] = (1.f - weight) * src[i] +  weight * des[i];
+		}
+		return res;
+	}
+	template<>
+	static float lerp(const float& src, const float& des, const float& weight)
+	{
+		return (1.f - weight) * src + weight * des;
+	}
 }
 
 #endif // NUT_MATH_H

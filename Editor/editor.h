@@ -16,5 +16,10 @@ private:
     Ui::EditorClass ui;
     void Init();
     QWidget* p_viewport_;
+    void keyPressEvent(QKeyEvent* ev) override;
+    void keyReleaseEvent(QKeyEvent* ev) override;
+    void mouseMoveEvent(QMouseEvent* ev) override;
+    void mousePressEvent(QMouseEvent* event);
+    void mouseReleaseEvent(QMouseEvent* event);
 };
 

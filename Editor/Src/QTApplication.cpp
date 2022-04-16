@@ -1,8 +1,5 @@
 #include "../Inc/QTApplication.h"
 
-
-
-
 QTApplication::QTApplication(GfxConfiguration& cfg) : BaseApplication(cfg)
 {
 }
@@ -11,7 +8,7 @@ int QTApplication::Initialize()
 {
 	int ret = 0;
 	pp_argv_ = new char*[1];
-	pp_argv_[0] = "NutEngine";
+	pp_argv_[0] = const_cast<char*>("NutEngine");
 	argc_ = 0;
 	p_app_ = new QApplication(argc_, pp_argv_);
 	p_editor_ = new Editor();

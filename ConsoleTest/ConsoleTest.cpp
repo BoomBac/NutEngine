@@ -3,33 +3,24 @@
 
 #include <iostream>
 #include <utility>
+#include <DirectXMath.h>
+
+#include "Framework/Math/NutMath.hpp"
 //#include "fbxsdk.h"
-#include "Framework/Parser/FbxParser.h"
+
 
 
 using std::cout;
 using std::endl;
+using namespace DirectX;
+using namespace Engine;
 //using fbxsdk::FbxCast;
 
-namespace Engine
-{
-	MemoryManager* g_pMemoryManager = new MemoryManager();
-	AssetLoader* g_pAssetLoader = new AssetLoader();
-}
-using Engine::g_pAssetLoader;
-using Engine::g_pMemoryManager;
 
-int main(int argc,char** argv)
-{	
+
+void func()
+{
 	//const char* file_name = "H:/Project_VS2019/NutEngine/Engine/Asset/box.fbx";
-	g_pMemoryManager->Initialize();
-	g_pAssetLoader->Initialize();
-	g_pAssetLoader->AddSearchPath("H:/Project_VS2019/NutEngine/Engine");
-	const char* file_name = "box.fbx";
-	Engine::FbxParser parse;
-	auto scene = parse.Parse(file_name);
-	g_pMemoryManager->Finalize();
-	g_pAssetLoader->Finalize();
 	// 
 	// 
 	//	// Initialize the SDK manager. This object handles memory management.
@@ -89,5 +80,18 @@ int main(int argc,char** argv)
 	//lImporter->Destroy();
 	//ios->Destroy();
 	//lSdkManager->Destroy();
+}
+
+
+
+int main(int argc,char** argv)
+{	
+	XMMATRIX xr = XMMatrixRotationY(60.f); 
+	Matrix4x4f r{};
+	MatrixRotationY(r, 60.f);
+	XMVECTOR vec{1.f,0.f,0.f,0.f};
+	vec = XMVector3TransformCoord(vec,xr);
+	Vector4f v{1.f,0.f,0.f,1.f};
+	Transform(v,r);
 	return 0;
 }

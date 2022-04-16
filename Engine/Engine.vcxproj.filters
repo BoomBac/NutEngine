@@ -49,14 +49,14 @@
     <Filter Include="External\OpenFbx">
       <UniqueIdentifier>{e179b875-dfdf-48fc-820e-e8735bcc340a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Inc\Framework\Parser">
-      <UniqueIdentifier>{4df40bb6-0cd4-4bf9-9720-300b9bd3c155}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Src\Framework\Parser">
       <UniqueIdentifier>{6e9dbe9a-4228-4b0f-8915-36ac3aa7b6ad}</UniqueIdentifier>
     </Filter>
     <Filter Include="Src\Framework\Math">
       <UniqueIdentifier>{8e876bea-a5c3-4f16-8a19-23960c397a9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc\Framework\Parser">
+      <UniqueIdentifier>{4df40bb6-0cd4-4bf9-9720-300b9bd3c155}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -138,6 +138,12 @@
     <ClInclude Include="Inc\Framework\Common\SceneManager.h">
       <Filter>Inc\Framework\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\InputManager.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\CameraManager.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -182,17 +188,26 @@
     <ClCompile Include="Src\Framework\Common\SceneManager.cpp">
       <Filter>Src\Framework\Common</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Framework\Common\InputManager.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Common\SceneObject.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Common\CameraManager.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Asset\Shaders\simple_vs.hlsl">
+    <FxCompile Include="Asset\Shader\vs.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Asset\Shaders\simple_ps.hlsl">
+    <FxCompile Include="Asset\Shader\ps.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Asset\Shaders\type.hlsli">
+    <None Include="Asset\Shader\type.hlsli">
       <Filter>Shader</Filter>
     </None>
   </ItemGroup>

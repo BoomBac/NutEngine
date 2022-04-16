@@ -30,13 +30,11 @@ namespace Engine
 		{
 			std::shared_ptr<Matrix4x4f> result(new Matrix4x4f());
 			BuildIdentityMatrix(*result);
-
 			// TODO: cascading calculation
 			for (auto trans : transforms_)
 			{
 				*result = *result * static_cast<Matrix4x4f>(*trans);
 			}
-
 			return result;
 		}
 	protected:
@@ -90,9 +88,22 @@ namespace Engine
 	{
 	public:
 		using SceneNode::SceneNode;
-		void SetTarget(Vector3f& target) { target_ = target; };
+		void SetTarget(Vector3f target) { target_ = target; };
+		void SetPosition(Vector3f position) { position_ = position; };
+		void SetUp(Vector3f up) { up_ = up; };
+
 		const Vector3f& GetTarget() { return target_; };
+		const Vector3f& GetPosition() { return position_; };
+		const Vector3f& GetUp() { return up_; };
+		const Vector3f& GetRight() { return right_; };
+		const Vector3f& GetForward() { return forawrd_; };
+
 	protected:
 		Vector3f target_;
+		Vector3f position_;
+		Vector3f up_;
+		Vector3f right_;
+		Vector3f forawrd_;
+
 	};
 }
