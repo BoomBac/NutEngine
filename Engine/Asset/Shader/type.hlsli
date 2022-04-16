@@ -4,6 +4,7 @@ struct PSInput
 {
 	float4 position : SV_POSITION;
 	float3 normal : NORMAL;
+	float3 positionW : POSITION;
 };
 struct VSOutput
 {
@@ -21,6 +22,7 @@ cbuffer DrawFrameContext : register(b0)
 cbuffer DrawBatchContext : register(b1)
 {
 	float4x4 g_object_matrix_;
+	float4x4 g_normal_matrix_;
 	int g_count_;
 	float g_color_;
 };

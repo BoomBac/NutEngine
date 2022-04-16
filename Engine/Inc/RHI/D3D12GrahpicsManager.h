@@ -15,6 +15,7 @@ namespace Engine
         struct DrawBatchContext 
         {
             Matrix4x4f object_matrix;
+            Matrix4x4f normal_matrix;
             int32_t count;
             float color;
             //std::shared_ptr<Matrix4x4f> transform;
@@ -77,6 +78,7 @@ namespace Engine
 
         uint32_t                        rtv_desc_size_;
         uint32_t                        cbv_srv_uav_desc_size_;
+        uint32_t                        vertex_buf_per_frame_num_;
 
         ComPtr<ID3D12Resource> p_vertex_buf_ = nullptr;          // the pointer to the vertex buffer
         std::vector<ComPtr<ID3D12Resource>>    buffers_;                          // the pointer to the vertex buffer

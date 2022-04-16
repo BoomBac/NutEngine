@@ -152,6 +152,7 @@ std::shared_ptr<SceneObjectTransform> Engine::FbxParser::GenerateTransform(fbxsd
 	//	parentMatrix = pParentNode->EvaluateLocalTransform() * parentMatrix;
 	//}
 	//FbxAMatrix matrix = parentMatrix * localMatrix * matrixGeo;
+	FbxAMatrix matrix = localMatrix * matrixGeo;
 	Matrix4x4f res{};
 	for(int32_t i = 0; i < 4; ++i)
 	{
@@ -245,18 +246,19 @@ void FbxParser::GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::F
 		fbxsdk::FbxGeometryConverter convert(fbx_manager_);
 		mesh = FbxCast<fbxsdk::FbxMesh>(convert.Triangulate(mesh, true));
 	}
-	ReadNormal(mesh, nut_mesh);
-	ReadVertex(mesh,nut_mesh);
-
+	//The vertex must be added to the MeshObject's vector before the normal, 
+	//because the input layout is passed in the vertex-normal order
+	ReadVertex(*mesh, nut_mesh);
+	ReadNormal(*mesh, nut_mesh);
 	geo->AddMesh(nut_mesh);
 	scene.Geometries[mesh->GetName()] = geo;
 }
 
-void Engine::FbxParser::ReadNormal(fbxsdk::FbxMesh* mesh, std::shared_ptr<SceneObjectMesh> nut_mesh)
+void Engine::FbxParser::ReadNormal(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh)
 {
-	if (mesh->GetElementNormalCount() < 1) return;
-	auto* normals = mesh->GetElementNormal(0);
-	int vertex_count = mesh->GetControlPointsCount(), data_size = 0;
+	if (mesh.GetElementNormalCount() < 1) return;
+	auto* normals = mesh.GetElementNormal(0);
+	int vertex_count = mesh.GetControlPointsCount(), data_size = 0;
 	void* data = nullptr;
 	std::vector<Vector3f> temp_v;
 	if (normals->GetMappingMode() == fbxsdk::FbxLayerElement::EMappingMode::eByControlPoint)
@@ -279,7 +281,7 @@ void Engine::FbxParser::ReadNormal(fbxsdk::FbxMesh* mesh, std::shared_ptr<SceneO
 	}
 	else if (normals->GetMappingMode() == fbxsdk::FbxLayerElement::EMappingMode::eByPolygonVertex)
 	{
-		int trangle_count = mesh->GetPolygonCount();
+		int trangle_count = mesh.GetPolygonCount();
 		vertex_count = trangle_count * 3;
 		data = new float[vertex_count * 3];
 		int cur_vertex_id = 0;
@@ -307,19 +309,19 @@ void Engine::FbxParser::ReadNormal(fbxsdk::FbxMesh* mesh, std::shared_ptr<SceneO
 	nut_mesh->AddVertexArray(std::move(_v_array));
 }
 
-void Engine::FbxParser::ReadVertex(fbxsdk::FbxMesh* mesh, std::shared_ptr<SceneObjectMesh> nut_mesh)
+void Engine::FbxParser::ReadVertex(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh)
 {
-	int32_t trangle_count = mesh->GetPolygonCount();
+	int32_t trangle_count = mesh.GetPolygonCount();
 	int32_t vertex_count = trangle_count * 3;
 	//TODO:Here the vertex and index buffers are not freed and can cause memory leaks
 	void* vertex_buf = new float[vertex_count * 3];
-	fbxsdk::FbxVector4* points = mesh->GetControlPoints();
+	fbxsdk::FbxVector4* points = mesh.GetControlPoints();
 	int32_t point_index = 0, cur_index_count = 0;
 	for (int32_t i = 0; i < trangle_count; ++i)
 	{
 		for (int32_t j = 0; j < 3; ++j)
 		{
-			point_index = mesh->GetPolygonVertex(i, j);
+			point_index = mesh.GetPolygonVertex(i, j);
 			reinterpret_cast<float*>(vertex_buf)[cur_index_count * 3] = points[point_index].mData[0];
 			reinterpret_cast<float*>(vertex_buf)[cur_index_count * 3 + 1] = points[point_index].mData[1];
 			reinterpret_cast<float*>(vertex_buf)[cur_index_count * 3 + 2] = points[point_index].mData[2];

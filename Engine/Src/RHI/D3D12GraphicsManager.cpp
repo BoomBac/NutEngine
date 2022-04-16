@@ -4,6 +4,7 @@
 #include "Framework/Common/Buffer.h"
 #include "Framework/Common/AssetLoader.h"
 #include "Framework/Common/SceneManager.h"
+#include <directxmath.h>
 
 
 
@@ -124,17 +125,22 @@ namespace Engine
 					// Set the number of vertices in the vertex array.
 					auto vertexCount = pMesh->GetVertexCount();
 					Buffer buff;
+					int pre_load_vex_arr_count = draw_batch_context_.size();
 					for (decltype(vertexPropertiesCount) i = 0; i < vertexPropertiesCount; i++) {
 						const SceneObjectVertexArray& v_property_array = pMesh->GetVertexPropertyArray(i);
 						CreateVertexBuffer(v_property_array);
 					}
-					auto indexGroupCount = pMesh->GetIndexGroupCount();
-					for (decltype(indexGroupCount) i = 0; i < indexGroupCount; i++) {
-						const SceneObjectIndexArray& index_array = pMesh->GetIndexArray(i);
-						CreateIndexBuffer(index_array);
+					//auto indexGroupCount = pMesh->GetIndexGroupCount();
+					//for (decltype(indexGroupCount) i = 0; i < indexGroupCount; i++) {
+					//	const SceneObjectIndexArray& index_array = pMesh->GetIndexArray(i);
+					//	CreateIndexBuffer(index_array);
+					//}
+					if(draw_batch_context_.size() - pre_load_vex_arr_count > 0)
+					{
+						draw_batch_context_[n].object_matrix = Transpose(*pGeometryNode->GetCalculatedTransform());
+						n += draw_batch_context_.size() - pre_load_vex_arr_count;
 					}
-					draw_batch_context_[n].object_matrix = Transpose(*pGeometryNode->GetCalculatedTransform());
-					n++;
+
 				}
 				pGeometryNode = scene->GetNextGeometryNode();
 			}
@@ -166,8 +172,23 @@ namespace Engine
 			draw_frame_context_.world_matrix_ = BuildIdentityMatrix();
 			memcpy(p_cbv_data_begin_, reinterpret_cast<void*>(&draw_frame_context_),sizeof(DrawFrameContext));
 			Matrix4x4f world{};
-			BuildIdentityMatrix(world);
-			MatrixTranslation(world,0,0,0);
+			// calculate matrix to transform normal
+			DirectX::XMMATRIX xm{};		
+			for(int i = 0; i < 4; ++i)
+			{
+				for(int j = 0; j < 4;++j)
+					xm.r[i].m128_f32[j] = draw_batch_context_[0].object_matrix[i][j];
+			}
+			xm.r[3] = DirectX::XMVectorSet(0.f,0.f,0.f,1.f);
+			auto deter = DirectX::XMMatrixDeterminant(xm);
+			xm = DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(&deter, xm));
+			for (int i = 0; i < 4; ++i)
+			{
+				for (int j = 0; j < 4; ++j)
+					draw_batch_context_[0].normal_matrix[i][j] = xm.r[i].m128_f32[j];
+			}
+
+			draw_batch_context_[0].normal_matrix = draw_batch_context_[0].normal_matrix;
 			draw_batch_context_[0].color = 0.5f;
 		}
 		return hr;
@@ -190,6 +211,7 @@ namespace Engine
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 		};
+		vertex_buf_per_frame_num_ = _countof(ied);
 		//TODO: Create D3D12_RASTERIZER_DESC D3D12_RENDER_TARGET_BLEND_DESC D3D12_BLEND_DESC D3D12_DEPTH_STENCILOP_DESC D3D12_DEPTH_STENCIL_DESC
 		//Create DepthSenticil Desc
 		const D3D12_DEPTH_STENCILOP_DESC defaultStencilOp = { D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_COMPARISON_FUNC_ALWAYS };
@@ -382,7 +404,7 @@ namespace Engine
 			SetPerBatchShaderParameters(i);
 			cbv_handle[1].ptr = cbv_handle[0].ptr + cbv_srv_uav_desc_size_ * (i + 1);
 			p_cmdlist_->SetGraphicsRootDescriptorTable(1, cbv_handle[1]);
-			p_cmdlist_->IASetVertexBuffers(0, 2, &vertex_buf_view_[i]);
+			p_cmdlist_->IASetVertexBuffers(0, 2, &vertex_buf_view_[i * vertex_buf_per_frame_num_]);
 			// select which index buffer to use
 			//p_cmdlist_->IASetIndexBuffer(&index_buf_view_[i]);
 			// draw the vertex buffer to the back buffer

@@ -25,8 +25,8 @@ namespace Engine
 		void GenerateMaterial(const fbxsdk::FbxSurfaceMaterial* mat, Scene& scene);
 		void GenerateLight(const fbxsdk::FbxLight* light, Scene& scene);
 		void GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::FbxMesh* mesh, Scene& scene);
-		void ReadNormal(fbxsdk::FbxMesh* mesh, std::shared_ptr<SceneObjectMesh> nut_mesh);
-		void ReadVertex(fbxsdk::FbxMesh* mesh, std::shared_ptr<SceneObjectMesh> nut_mesh);
+		void ReadNormal(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh);
+		void ReadVertex(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh);
 		void ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object,std::shared_ptr<BaseSceneNode>& base_node,Scene& scene, fbxsdk::FbxScene* fbx_scene);
 		std::shared_ptr<SceneObjectTransform> GenerateTransform(fbxsdk::FbxNode* p_node);
 		bool bYup_ = true;

@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 
     g_pAssetLoader->AddSearchPath("H:/Project_VS2019/NutEngine/Engine");
     auto p_main_window = dynamic_cast<QTApplication*>(g_pApp)->GetMainWindow();
-    g_pSceneManager->LoadScene("box.fbx");
+    g_pSceneManager->LoadScene("hair.fbx");
     g_pGraphicsManager->Initialize();
     g_InputManager->Initialize();
 
