@@ -5,6 +5,7 @@ struct PSInput
 	float4 position : SV_POSITION;
 	float3 normal : NORMAL;
 	float3 positionW : POSITION;
+	float2 uv : TEXCOORD;
 };
 struct VSOutput
 {
@@ -21,6 +22,8 @@ cbuffer DrawFrameContext : register(b0)
 	float4 g_light_position_;
 	float4 g_camera_position_;
 };
+Texture2D g_texture : register(t0);
+SamplerState g_sampler : register(s0);
 
 cbuffer DrawBatchContext : register(b1)
 {

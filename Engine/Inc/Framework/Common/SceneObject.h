@@ -97,6 +97,8 @@ namespace Engine
             switch (data_type_) {
             case EVertexDataType::kVertexDataFloat1:
             case EVertexDataType::kVertexDataFloat2:
+                size *= sizeof(float) * 2;
+                break;
             case EVertexDataType::kVertexDataFloat3:
                 size *= sizeof(float) * 3;
                 break;
@@ -225,7 +227,21 @@ namespace Engine
         SceneObjectTexture(SceneObjectTexture&) = default;
         SceneObjectTexture(SceneObjectTexture&&) = default;
         void SetName(std::string& name) { name_ = name; };
+        void SetName(std::string&& name) { name_ = std::move(name); };
+        const std::string GetName() { return name_;}
         void AddTransform(Matrix4x4f& matrix) { transforms_.push_back(matrix); };
+        const Image& GetImage()
+        {
+            if(!p_image_) LoadTexture();
+            return *p_image_;
+        }
+        //tmp
+        void GenerateCheckBoard(INT64 w, INT64 h);
+        INT32 width_;
+        INT32 height_;
+        INT64 pitch_;
+        INT32 channel_;
+        void LoadTexture();
     protected:
         uint32_t tex_coord_id_;
         std::string name_;
@@ -262,7 +278,8 @@ namespace Engine
         {
             kDiffuse,
             kSpecular,
-            kSpecularFactor
+            kSpecularFactor,
+            kNormalMap
         };
         inline static const char* kPropertyStrArr[]{"diffuse","specular","specular_factor"};
 
@@ -272,10 +289,14 @@ namespace Engine
             Normal&& normal = Vector3f(0.0f, 0.0f, 1.0f), Color&& specular = Vector4f(1.0f), Parameter&& specular_power = 2.f,Parameter&& ao = 0.0f,Color&& opacity = Vector4f(0.f),Color&& transparency = Vector4f(0.f),
             Color&& emission = Vector4f(0.f)) :
             BaseSceneObject(ESceneObjectType::kSceneObjectTypeMaterial), name_(name), base_color_(std::move(base_color)), metallic_(std::move(metallic)),
-            roughness_(std::move(roughness)), normal_(std::move(normal)), specular_(std::move(specular)),specular_power_(std::move(specular_power)), abient_occlusion_(std::move(ao))
+            roughness_(std::move(roughness)), normal_map_(std::move(normal)), specular_(std::move(specular)),specular_power_(std::move(specular_power)), abient_occlusion_(std::move(ao))
             ,opacity_(std::move(opacity)),transparency_(std::move(transparency)),emission_(emission) {};
         void SetName(const std::string& name) { name_ = name; };
         void SetName(std::string&& name) { name_ = std::move(name); };
+        const Color& GetBaseColor() const { return base_color_; };
+        const Color& GetSpecularColor() const { return specular_; };
+        const Parameter& GetSpecularPower() const { return specular_power_; };
+        const Normal& GetNormal() const { return normal_map_; };
         /// <param name="name">diffuse dispecular emission opacity transparency</param>
         /// <param name="color"></param>
         void SetColor(EMaterialProperty type, Vector4f color);
@@ -284,20 +305,23 @@ namespace Engine
         void SetParam(EMaterialProperty type, float param);
         Color GetColor(EMaterialProperty type) const;
         Parameter GetParameter(EMaterialProperty type) const;
-        void SetTexture(std::string& attrib, std::string& textureName);
-        void SetTexture(std::string& attrib, std::shared_ptr<SceneObjectTexture>& texture);
+        void SetTexture(EMaterialProperty type, std::string textureName);
+        void SetTexture(EMaterialProperty type, std::shared_ptr<SceneObjectTexture>& texture);
+        std::string GetTexture(EMaterialProperty type) const{}
+
     protected:
         std::string name_;
         Color       base_color_;
         Parameter   metallic_;
         Parameter   roughness_;
-        Normal      normal_;
+        Normal      normal_map_;
         Color       specular_;
         Parameter   specular_power_;
         Parameter   abient_occlusion_;
         Color       opacity_;
         Color       transparency_;
         Color       emission_;
+        std::string base_color_path_;
     };
 
     class SceneObjectGeometry : public BaseSceneObject

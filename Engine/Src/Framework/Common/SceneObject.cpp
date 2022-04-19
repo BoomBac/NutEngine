@@ -2,6 +2,7 @@
 #include "Framework/Common/SceneNode.h"
 #include "Framework/Common/Log.h"
 
+#include "Framework/Parser/JPEG.h"
 
 namespace Engine
 {
@@ -127,22 +128,52 @@ namespace Engine
 		NE_LOG(ALL, kWarning, "{} is missing,will return 0.f", kPropertyStrArr[type])
 		return 0.f;
 	}
+	void SceneObjectMaterial::SetTexture(EMaterialProperty type, std::string textureName)
+	{
+		if (type == EMaterialProperty::kDiffuse) base_color_ = std::make_shared<SceneObjectTexture>(textureName);
+		else if (type == EMaterialProperty::kSpecular) specular_ = std::make_shared<SceneObjectTexture>(textureName);
+		else if (type == EMaterialProperty::kSpecularFactor) specular_power_ = std::make_shared<SceneObjectTexture>(textureName);
+		else if (type == EMaterialProperty::kNormalMap) normal_map_ = std::make_shared<SceneObjectTexture>(textureName);
+	}
+	void SceneObjectMaterial::SetTexture(EMaterialProperty type, std::shared_ptr<SceneObjectTexture>& texture)
+	{
+		if (type == EMaterialProperty::kDiffuse) base_color_ = texture;
+		else if (type == EMaterialProperty::kSpecular) specular_ = texture;
+		else if (type == EMaterialProperty::kSpecularFactor) specular_power_ = texture;
+		else if (type == EMaterialProperty::kNormalMap) normal_map_ = texture;
+	}
+	//-----------------------texture
+	void SceneObjectTexture::GenerateCheckBoard(INT64 w, INT64 h)
+	{
+		//width_ = w;
+		//height_ = h;
+		//pitch_ = w * 4;
+		//p_data_ = std::make_unique<UINT8[]>(w * h * 4);
+		//for (INT64 i = 0; i < w; i++)
+		//{
+		//	for (INT64 j = 0; j < h ; j++)
+		//	{
+		//		p_data_[i * w  * 4 + j * 4] = 0xff;
+		//		p_data_[i * w  * 4 + j * 4 + 1] = 0xff;
+		//		p_data_[i * w  * 4 + j * 4 + 2] = 0x00;
+		//		p_data_[i * w  * 4 + j * 4 + 3] = 0xff;
+		//	}
+		//}
+	}
 
-	//Color SceneObjectMaterial::GetColor(std::string name) const
-	//{
-	//	if (name == "diffuse") return base_color_;
-	//	else if (name == "specular") return sepcular_;
-	//	else if (name == "emission")  return emission_;
-	//	else if (name == "opacity") return opacity_;
-	//	else if (name == "transparency") return transparency_;
-	//}
-
-	//Parameter SceneObjectMaterial::GetParameter(std::string name) const
-	//{
-	//	if (name == "specular_power") return specular_power_;
-	//	else if (name == "metallic")  return metallic_;
-	//	else if (name == "roughness")  return roughness_;
-	//	else if (name == "abient_occlusion")  return abient_occlusion_;
-	//}
+	void SceneObjectTexture::LoadTexture()
+	{
+		{
+			if (!p_image_)
+			{
+				//jpeg handle all format temp
+				JpegParser parser;
+				p_image_ = std::make_shared<Image>(parser.Parse(name_.c_str()));
+				width_ = p_image_->width;
+				height_ = p_image_->height;
+				pitch_ = p_image_->pitch;
+			}
+		}
+	}
 
 }

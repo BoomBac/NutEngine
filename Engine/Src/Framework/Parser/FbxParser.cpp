@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <filesystem>
 #include "Framework/Parser/FbxParser.h"
 #include "Framework/Common/TimerManager.h"
 #include "Framework/Common/Log.h"
@@ -11,6 +12,8 @@ using std::make_shared;
 using fbxsdk::FbxNodeAttribute;
 using fbxsdk::FbxCast;
 using fbxsdk::FbxNode;
+
+namespace fs = std::filesystem;
 
 
 Engine::FbxParser::FbxParser()
@@ -110,15 +113,16 @@ bool Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, 
 			_node->AddMaterialRef(object_name);
 			GenerateMaterial(mat, scene);
 		}
-		object_name = object->GetName();
-		scene.GeometryNodes.emplace(object_name, _node);
 		std::shared_ptr<SceneObjectGeometry> geometry = make_shared<SceneObjectGeometry>();
 		geometry->SetVisibility(_node->Visible());
 		geometry->SetIfCastShadow(_node->CastShadow());
 		geometry->SetIfMotionBlur(true);
-		auto object_transf = std::async(&FbxParser::GenerateTransform,this,object);
-		GenerateMesh(geometry, _mesh, scene);
-		_node->AppendChild(object_transf.get());
+		if(GenerateMesh(geometry, _mesh, scene))
+		{
+			scene.GeometryNodes.emplace(object->GetName(), _node);
+			auto object_transf = std::async(&FbxParser::GenerateTransform, this, object);
+			_node->AppendChild(object_transf.get());
+		}
 	}
 	break;
 	case FbxNodeAttribute::EType::eNurbs: {}break;
@@ -201,10 +205,46 @@ void Engine::FbxParser::GenerateMaterial(const fbxsdk::FbxSurfaceMaterial* mat, 
 	if (phong != nullptr) {
 		material->SetColor(SceneObjectMaterial::kSpecular, FbxToNutVector4f(phong->Specular));
 		material->SetColor(SceneObjectMaterial::kDiffuse, FbxToNutVector4f(phong->Diffuse));
-		//material->SetColor("emission", FbxToNutVector4f(phong->Emissive));
-		//material->SetColor("transparency", FbxToNutVector4f(phong->TransparentColor));
 		material->SetParam(SceneObjectMaterial::kSpecularFactor,static_cast<float>(phong->SpecularFactor));
+		for(int32_t i = 0; i < fbxsdk::FbxLayerElement::sTypeTextureCount; ++i)
+		{
+			auto prop = phong->FindProperty(fbxsdk::FbxLayerElement::sTextureChannelNames[i]);
+			if(prop.IsValid())
+			{
+				int tex_count = prop.GetSrcObjectCount<fbxsdk::FbxTexture>();
+				for(int j = 0; j < tex_count; ++j)
+				{
+					fbxsdk::FbxTexture* texture = prop.GetSrcObject<fbxsdk::FbxTexture>(j);
+					if(texture)
+					{
+						std::string texture_type = prop.GetNameAsCStr();
+						fbxsdk::FbxFileTexture* file_texture = fbxsdk::FbxCast<FbxFileTexture>(texture);
+						std::string file_name{file_texture->GetMediaName()};
+						if(texture_type=="DiffuseColor")
+						{
+							p_thread_pool_->Enqueue(&FbxParser::CopyTexture,this, std::string(file_texture->GetFileName()), 
+								std::string(kAssetTexturePath), file_name);
+							material->SetTexture(SceneObjectMaterial::kDiffuse, file_name);
+						}						
+						else if(texture_type == "SpecularColor")
+						{
+							p_thread_pool_->Enqueue(&FbxParser::CopyTexture, this, std::string(file_texture->GetFileName()),
+								std::string(kAssetTexturePath), file_name);
+							material->SetTexture(SceneObjectMaterial::kSpecular, file_name);
+						}
+						else if(texture_type == "NormalMap")
+						{
+							p_thread_pool_->Enqueue(&FbxParser::CopyTexture, this, std::string(file_texture->GetFileName()),
+								std::string(kAssetTexturePath), file_name);
+							material->SetTexture(SceneObjectMaterial::kNormalMap, file_name);
+						}
+					}
+				}
+			}
+		}
 	}
+	
+
 	scene.Materials[material_name] = material;
 }
 
@@ -243,7 +283,7 @@ void Engine::FbxParser::GenerateLight(const fbxsdk::FbxLight* light, Scene& scen
 	scene.Lights[light->GetName()] = _light;
 }
 
-void FbxParser::GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::FbxMesh* mesh, Scene& scene)
+bool FbxParser::GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::FbxMesh* mesh, Scene& scene)
 {
 	std::shared_ptr<SceneObjectMesh> nut_mesh(new SceneObjectMesh());
 	if(!mesh->IsTriangleMesh()) {
@@ -252,24 +292,26 @@ void FbxParser::GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::F
 	}
 	//The vertex must be added to the MeshObject's vector before the normal, 
 	//because the input layout is passed in the vertex-normal order
-	//not thread seaf
-	auto ret1 = p_thread_pool_->Enqueue([&]()->bool{
-		ReadVertex(*mesh, nut_mesh);
+	//not thread safe now 
+	//auto ret1 = p_thread_pool_->Enqueue(&FbxParser::ReadVertex,this,std::ref(*mesh),nut_mesh);
+	//auto ret2 = p_thread_pool_->Enqueue(&FbxParser::ReadNormal, this, std::ref(*mesh), nut_mesh);
+	//auto ret3 = p_thread_pool_->Enqueue(&FbxParser::ReadUVs, this, std::ref(*mesh), nut_mesh);
+
+	auto ret1 = ReadVertex(*mesh,nut_mesh);
+	auto ret2 = ReadNormal(*mesh,nut_mesh);
+	auto ret3 = ReadUVs(*mesh,nut_mesh);
+	if(ret1&& ret2&& ret3)
+	{
+		geo->AddMesh(nut_mesh);
+		scene.Geometries[mesh->GetName()] = geo;
 		return true;
-		});
-	auto ret2 = p_thread_pool_->Enqueue([&]()->bool {
-		ReadNormal(*mesh, nut_mesh);
-		return true;
-		});
-	ret1.get();
-	ret2.get();
-	geo->AddMesh(nut_mesh);
-	scene.Geometries[mesh->GetName()] = geo;
+	}
+	return false;
 }
 
-void Engine::FbxParser::ReadNormal(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh)
+bool Engine::FbxParser::ReadNormal(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh)
 {
-	if (mesh.GetElementNormalCount() < 1) return;
+	if (mesh.GetElementNormalCount() < 1) return false;
 	auto* normals = mesh.GetElementNormal(0);
 	int vertex_count = mesh.GetControlPointsCount(), data_size = 0;
 	void* data = nullptr;
@@ -320,11 +362,15 @@ void Engine::FbxParser::ReadNormal(const fbxsdk::FbxMesh& mesh, std::shared_ptr<
 	SceneObjectVertexArray& _v_array = *new SceneObjectVertexArray(EVertexArrayType::kNormal, 0u, EVertexDataType::kVertexDataFloat3,
 		data, vertex_count);
 	if(vertex_count == 0)
-		NE_LOG(ALL,kError,"{}'s normal with 0 vertex",mesh.GetName())
+	{
+		NE_LOG(ALL, kWarning, "{}'s normal with 0 vertex", mesh.GetName())
+		return false;
+	}
 	nut_mesh->AddVertexArray(std::move(_v_array));
+	return true;
 }
 
-void Engine::FbxParser::ReadVertex(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh)
+bool Engine::FbxParser::ReadVertex(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh)
 {
 	int32_t trangle_count = mesh.GetPolygonCount();
 	int32_t vertex_count = trangle_count * 3;
@@ -346,6 +392,96 @@ void Engine::FbxParser::ReadVertex(const fbxsdk::FbxMesh& mesh, std::shared_ptr<
 	EVertexDataType vertex_type = EVertexDataType::kVertexDataFloat3;
 	SceneObjectVertexArray& _v_array = *new SceneObjectVertexArray(EVertexArrayType::kVertex, 0u, vertex_type, vertex_buf, vertex_count);
 	if (vertex_count == 0)
-		NE_LOG(ALL, kError, "{}'s vertex with 0 vertex", mesh.GetName())
+	{
+		NE_LOG(ALL, kWarning, "{}'s vertex with 0 vertex", mesh.GetName())
+		return false;
+	}
 	nut_mesh->AddVertexArray(std::move(_v_array));
+	return true;
+}
+
+bool Engine::FbxParser::ReadUVs(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh)
+{
+	//get all UV set names
+	fbxsdk::FbxStringList name_list;
+	mesh.GetUVSetNames(name_list);
+	for(int i = 0; i < name_list.GetCount(); ++i)
+	{
+		//get lUVSetIndex-th uv set
+		const char* uv_name = name_list.GetStringAt(i);
+		const FbxGeometryElementUV* uv = mesh.GetElementUV(uv_name);
+		if(!uv) continue;
+		//index array, where holds the index referenced to the uv data
+		const bool lUseIndex = uv->GetReferenceMode() != FbxGeometryElement::eDirect;
+		const int lIndexCount = (lUseIndex) ? uv->GetIndexArray().GetCount() : 0;
+		//iterating through the data by polygon
+		const int trangle_count = mesh.GetPolygonCount();
+		float* data = new float[trangle_count * 6];
+		if (uv->GetMappingMode() == FbxGeometryElement::eByControlPoint)
+		{
+			int cur_vertex_id = 0;
+			for (int lPolyIndex = 0; lPolyIndex < trangle_count; ++lPolyIndex)
+			{
+				// build the max index array that we need to pass into MakePoly
+				for (int lVertIndex = 0; lVertIndex < 3; ++lVertIndex)
+				{
+					//get the index of the current vertex in control points array
+					int lPolyVertIndex = mesh.GetPolygonVertex(lPolyIndex, lVertIndex);
+					//the UV index depends on the reference mode
+					int lUVIndex = lUseIndex ? uv->GetIndexArray().GetAt(lPolyVertIndex) : lPolyVertIndex;
+					FbxVector2 uvs = uv->GetDirectArray().GetAt(lUVIndex);
+					reinterpret_cast<float*>(data)[cur_vertex_id * 2] = uv->GetDirectArray().GetAt(lUVIndex)[0];
+					reinterpret_cast<float*>(data)[cur_vertex_id * 2 + 1] = 1.f - uv->GetDirectArray().GetAt(lUVIndex)[1];
+					++cur_vertex_id;
+				}
+			}
+		}
+		else if (uv->GetMappingMode() == FbxGeometryElement::eByPolygonVertex)
+		{
+			int lPolyIndexCounter = 0;
+			for (int lPolyIndex = 0; lPolyIndex < trangle_count; ++lPolyIndex)
+			{
+				for (int lVertIndex = 0; lVertIndex < 3; ++lVertIndex)
+				{
+					//the UV index depends on the reference mode
+					int lUVIndex = lUseIndex ? uv->GetIndexArray().GetAt(lPolyIndexCounter) : lPolyIndexCounter;
+					FbxVector2 uvs = uv->GetDirectArray().GetAt(lUVIndex);
+					reinterpret_cast<float*>(data)[lPolyIndexCounter * 2] = uv->GetDirectArray().GetAt(lUVIndex)[0];
+					reinterpret_cast<float*>(data)[lPolyIndexCounter * 2 + 1] = 1.f - uv->GetDirectArray().GetAt(lUVIndex)[1];
+					//NE_LOG(ALL,kWarning,"U:{}V:{}",uvs[0],uvs[1])
+					lPolyIndexCounter++;
+				}
+			}
+		}
+		SceneObjectVertexArray& _u_array = *new SceneObjectVertexArray(EVertexArrayType::kUVs,0u,EVertexDataType::kVertexDataFloat2,data,trangle_count*3);
+		if (trangle_count == 0)
+		{
+			NE_LOG(ALL, kWarning, "{}'s uv with 0 vertex", mesh.GetName())
+				return false;
+		}
+		nut_mesh->AddVertexArray(std::move(_u_array));
+	}
+	return true;
+}
+
+void Engine::FbxParser::CopyTexture(std::string src, std::string dst, std::string name)
+{
+	fs::path src_path(src);
+	if (!fs::exists(src_path))
+	{
+		NE_LOG(ALL, kError, "source texture is missing,the path is {}", src)
+			return;
+	}
+	fs::path dst_path(dst);
+	if(!fs::exists(dst_path))
+	{
+		fs::create_directory(dst_path);
+	}
+	dst_path.append(name);
+	if(fs::exists(dst_path))
+		NE_LOG(ALL, kWarning, "{} already exist,origin content will be overwrite", dst_path.string())
+	if(!fs::copy_file(src_path, dst_path,fs::copy_options::overwrite_existing))
+		NE_LOG(ALL, kError, "texture form {} copy failed", src)
+	else
+		NE_LOG(ALL, kNormal, "texture {} copy completed", name)
 }

@@ -129,7 +129,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>H:\Project_VS2019\NutEngine\Engine\Inc;E:\DirectX-Headers\include;H:\Project_VS2019\NutEngine\Engine\External\FBXSDK\2020.3.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>H:\Project_VS2019\NutEngine\Engine\Inc;E:\DirectX-Headers\include;H:\Project_VS2019\NutEngine\Engine\External\FBXSDK\2020.3.1\include;X:\lib\DirectXTK12-main\Inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -137,8 +137,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;libfbxsdk.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>H:\Project_VS2019\NutEngine\Engine\External\FBXSDK\2020.3.1\lib\vs2019\x64\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;d3dcompiler.lib;libfbxsdk.lib;dxguid.lib;DirectXTK12.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>H:\Project_VS2019\NutEngine\Engine\External\FBXSDK\2020.3.1\lib\vs2019\x64\debug;X:\lib\DirectXTK12-main\Bin\Desktop_2022_Win10\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Lib>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
@@ -166,14 +166,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Engine.h" />
-    <ClInclude Include="External\OpenFbx\miniz.h" />
-    <ClInclude Include="External\OpenFbx\ofbx.h" />
+    <ClInclude Include="External\stb-image\stb_image.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Inc\Framework\Common\Allocator.hpp" />
     <ClInclude Include="Inc\Framework\Common\AssetLoader.h" />
     <ClInclude Include="Inc\Framework\Common\BaseApplication.h" />
     <ClInclude Include="Inc\Framework\Common\Buffer.h" />
     <ClInclude Include="Inc\Framework\Common\CameraManager.h" />
+    <ClInclude Include="Inc\Framework\Common\ColorSpaceConversion.h" />
     <ClInclude Include="Inc\Framework\Common\GfxConfiguration.h" />
     <ClInclude Include="Inc\Framework\Common\Global.h" />
     <ClInclude Include="Inc\Framework\Common\GraphicsManager.h" />
@@ -195,13 +195,12 @@
     <ClInclude Include="Inc\Framework\Math\NutMath.hpp" />
     <ClInclude Include="Inc\Framework\Parser\BMP.h" />
     <ClInclude Include="Inc\Framework\Parser\FbxParser.h" />
+    <ClInclude Include="Inc\Framework\Parser\JPEG.h" />
     <ClInclude Include="Inc\RHI\D3D12GrahpicsManager.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine.cpp" />
-    <ClCompile Include="External\OpenFbx\miniz.cpp" />
-    <ClCompile Include="External\OpenFbx\ofbx.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

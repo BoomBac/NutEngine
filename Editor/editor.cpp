@@ -53,25 +53,21 @@ void Editor::keyPressEvent(QKeyEvent* ev)
     case Qt::Key::Key_W:
     {
         g_InputManager->ButtonDown(Engine::EKeyButton::kW);
-        Logger::Log("w press");
     }       
         break;
     case Qt::Key::Key_A:
     {
         g_InputManager->ButtonDown(Engine::EKeyButton::kA);
-        Logger::Log("a press");
     }
         break;
     case Qt::Key::Key_S:
     {
         g_InputManager->ButtonDown(Engine::EKeyButton::kS);
-        Logger::Log("s press");
     }
         break;
     case Qt::Key::Key_D:
     {
         g_InputManager->ButtonDown(Engine::EKeyButton::kD);
-        Logger::Log("d press");
     }
         break;
     default:
@@ -86,25 +82,21 @@ void Editor::keyReleaseEvent(QKeyEvent* ev)
     case Qt::Key::Key_W:
     {
         g_InputManager->ButtonUp(Engine::EKeyButton::kW);
-        Logger::Log("w release");
     }
     break;
     case Qt::Key::Key_A:
     {
         g_InputManager->ButtonUp(Engine::EKeyButton::kA);
-        Logger::Log("a release");
     }
     break;
     case Qt::Key::Key_S:
     {
         g_InputManager->ButtonUp(Engine::EKeyButton::kS);
-        Logger::Log("s release");
     }
     break;
     case Qt::Key::Key_D:
     {
         g_InputManager->ButtonUp(Engine::EKeyButton::kD);
-        Logger::Log("d release");
     }
     break;
     default:

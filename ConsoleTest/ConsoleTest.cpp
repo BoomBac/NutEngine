@@ -1,30 +1,23 @@
-#include "Framework/Common/Log.h"
-#include "Framework/Common/ThreadManager.h"
-#include "Framework/Common/Global.h"
-#include <map>
-
+#include <iostream>
+#include <filesystem>
 
 
 using namespace std;
-using namespace Engine;
+namespace fs = std::filesystem;
 using std::cout;
 using std::endl;
-
-namespace Engine
-{
-	LogManager* g_pLogManager = new LogManager();
-
-}
 
 
 
 
 int main(int argc,char** argv)
 {	
-	LoadConfigFile("H:/Project_VS2019/NutEngine/Engine/config.ini");
-	g_pLogManager->Initialize();
-
-	g_pLogManager->Finalize();
+    int result = 0;
+	fs::path src("H:/Project_VS2019/NutEngine/Engine/Asset/diffuse.png");
+	fs::path dst("H:/Project_VS2019/NutEngine/Engine/Asset/Img/diffuse.png");
+	
+	auto ret = fs::exists(dst.parent_path());
+	fs::copy_file(src,dst);
 	return 0;
 }
 

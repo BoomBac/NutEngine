@@ -15,5 +15,7 @@ namespace Engine
 		uint32_t pitch;
 		// pitch * height  inclue memory align
 		size_t data_size;
+		Image() : width(0), height(0),data(nullptr), bit_count(0),pitch(0),data_size(0)
+		{};
 	};
 }

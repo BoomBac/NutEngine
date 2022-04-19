@@ -6,17 +6,29 @@
 #include <string>
 #include <limits>
 
-constexpr float kPi = 3.1415926f;
-constexpr float kDPi = kPi * 2.f;
+
 
 namespace Engine
 {
-	template<typename T, size_t size_of_arr>
-	constexpr size_t CountOf(T(&)[size_of_arr]) { return size_of_arr; }
+	namespace MathInternal
+	{
+		template<typename T, size_t size_of_arr>
+		constexpr size_t CountOf(T(&)[size_of_arr]) { return size_of_arr; }
 
-	template<typename T, size_t row, size_t col>
-	constexpr size_t CountOf(T(&)[row][col]) { return row * col; }
+		template<typename T, size_t row, size_t col>
+		constexpr size_t CountOf(T(&)[row][col]) { return row * col; }
 
+		static float NormalizeScaleFactor(int32_t var)
+		{
+			return (var == 0) ? 1.0f / sqrt(2.0f) : 1.0f;
+		}
+		constexpr float kPi = 3.1415926f;
+		constexpr float kDPi = kPi * 2.f;
+		constexpr float one_over_four = 1.f / 4.f;
+		constexpr float Pi_over_sixteen = kPi / 16.f;
+
+	}
+	using namespace MathInternal;
 	template<typename T>
 	constexpr T Normalize(T& var)
 	{
@@ -252,7 +264,7 @@ namespace Engine
 			for (uint32_t j = 0; j < cols; j++)
 			{
 				if (j != cols - 1) ss << mat[i][j] << ",";
-				else ss << mat[i][j] << " ]" << "\r\n";
+				else ss << mat[i][j] << " ]" <<"\n";
 			}
 		}
 		std::string temp;
@@ -260,6 +272,7 @@ namespace Engine
 		while (!ss.eof())
 		{
 			getline(ss, temp);
+			temp.append("\n");
 			res.append(temp);
 		}
 		return res;
@@ -401,6 +414,7 @@ namespace Engine
 		vector = temp;
 		return;
 	}
+	//Transform for point,w is 1.f
 	static void TransformCoord(Vector3f& vector, const Matrix4x4f& matrix)
 	{
 		Vector4f temp{vector,1.f};
@@ -408,9 +422,19 @@ namespace Engine
 		vector[0] = temp[0];
 		vector[1] = temp[1];
 		vector[2] = temp[2];
-
 		return;
 	}
+	//	//Transform for normal,w is 0.f
+	static void TransformNormal(Vector3f& vector, const Matrix4x4f& matrix)
+	{
+		Vector4f temp{ vector,0.f };
+		Transform(temp, matrix);
+		vector[0] = temp[0];
+		vector[1] = temp[1];
+		vector[2] = temp[2];
+		return;
+	}
+
 	static Matrix4x4f BuildViewMatrixLookToLH(Matrix4x4f& result, Vector3f position, Vector3f lookTo, Vector3f up)
 	{
 		Vector3f zAxis, xAxis, yAxis;
@@ -685,6 +709,50 @@ namespace Engine
 	static float lerp(const float& src, const float& des, const float& weight)
 	{
 		return (1.f - weight) * src + weight * des;
+	}
+
+	static Matrix<float, 8, 8> DCT8X8(const Matrix<int32_t,8,8>& in_mat)
+	{
+
+		Matrix<float, 8, 8> out_mat{};
+		for(int u = 0; u < 8; ++u)
+		{
+			for(int v = 0; v < 8; ++v)
+			{
+				float var = 0.f;
+				for (int x = 0; x < 8; ++x)
+				{
+					for (int y = 0; y < 8; ++y)
+					{
+						var += in_mat[x][y] * cos((2.f * x + 1.f) * u * Pi_over_sixteen) * cos((2.f * y + 1.f) * v * Pi_over_sixteen);
+					}
+				}
+				out_mat[u][v] = one_over_four * NormalizeScaleFactor(u) * NormalizeScaleFactor(v) * var;
+			}
+		}
+		return out_mat;
+	}
+
+	static Matrix<int32_t, 8, 8> IDCT8X8(const Matrix<int32_t, 8, 8>& in_mat)
+	{
+		Matrix<int32_t, 8, 8> out_mat{};
+		for (int x = 0; x < 8; ++x)
+		{
+			for (int y = 0; y < 8; ++y)
+			{
+				float var = 0;
+				for (int u = 0; u < 8; ++u)
+				{
+					for (int v = 0; v < 8; ++v)
+					{
+						var += NormalizeScaleFactor(u) * NormalizeScaleFactor(v) * in_mat[u][v] * 
+							cos((2.f * x+1.f) * u * Pi_over_sixteen) * cos((2.f * y + 1.f) * v * Pi_over_sixteen);
+					}
+					out_mat[x][y] = roundf(one_over_four * var);
+				}
+			}
+		}
+		return out_mat;
 	}
 }
 

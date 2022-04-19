@@ -46,9 +46,6 @@
     <Filter Include="External">
       <UniqueIdentifier>{ae1e49cc-4be7-46ba-90e2-8f77f7cd40c2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="External\OpenFbx">
-      <UniqueIdentifier>{e179b875-dfdf-48fc-820e-e8735bcc340a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Src\Framework\Parser">
       <UniqueIdentifier>{6e9dbe9a-4228-4b0f-8915-36ac3aa7b6ad}</UniqueIdentifier>
     </Filter>
@@ -57,6 +54,9 @@
     </Filter>
     <Filter Include="Inc\Framework\Parser">
       <UniqueIdentifier>{4df40bb6-0cd4-4bf9-9720-300b9bd3c155}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="External\stb-image">
+      <UniqueIdentifier>{076d17c2-31ea-499a-9d44-8ca6572ce487}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -114,12 +114,6 @@
     <ClInclude Include="Inc\Framework\Math\Guid.h">
       <Filter>Inc\Framework\Math</Filter>
     </ClInclude>
-    <ClInclude Include="External\OpenFbx\miniz.h">
-      <Filter>External\OpenFbx</Filter>
-    </ClInclude>
-    <ClInclude Include="External\OpenFbx\ofbx.h">
-      <Filter>External\OpenFbx</Filter>
-    </ClInclude>
     <ClInclude Include="Inc\Framework\Common\SceneNode.h">
       <Filter>Inc\Framework\Common</Filter>
     </ClInclude>
@@ -156,6 +150,15 @@
     <ClInclude Include="Inc\Framework\Common\TimerManager.h">
       <Filter>Inc\Framework\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\ColorSpaceConversion.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Parser\JPEG.h">
+      <Filter>Inc\Framework\Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="External\stb-image\stb_image.h">
+      <Filter>External\stb-image</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -181,12 +184,6 @@
     </ClCompile>
     <ClCompile Include="Src\Framework\Common\AssetLoader.cpp">
       <Filter>Src\Framework\Common</Filter>
-    </ClCompile>
-    <ClCompile Include="External\OpenFbx\miniz.cpp">
-      <Filter>External\OpenFbx</Filter>
-    </ClCompile>
-    <ClCompile Include="External\OpenFbx\ofbx.cpp">
-      <Filter>External\OpenFbx</Filter>
     </ClCompile>
     <ClCompile Include="Src\Framework\Common\Scene.cpp">
       <Filter>Src\Framework\Common</Filter>

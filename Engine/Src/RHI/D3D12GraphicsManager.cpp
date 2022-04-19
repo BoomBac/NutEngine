@@ -6,6 +6,8 @@
 #include "Framework/Common/SceneManager.h"
 #include "Framework/Common/Log.h"
 
+#include "WICTextureLoader.h"
+
 
 
 namespace Engine
@@ -99,7 +101,7 @@ namespace Engine
 	{
 		uint32_t offset = cur_back_buf_index_ * kSizeConstantBufferPerFrame + kSizePerFrameConstantBuffer + index * kSizePerFrameConstantBuffer;
 		memcpy(p_cbv_data_begin_ + offset,
-			reinterpret_cast<void*>(&draw_batch_context_[index]), sizeof(DrawBatchContext));
+			reinterpret_cast<void*>(&draw_batch_context_[index]), sizeof(DrawBatchConstants));
 		return true;
 	}
 	HRESULT D3d12GraphicsManager::InitializeBuffers()
@@ -108,9 +110,18 @@ namespace Engine
 		//TODO using kinds of buffer
 		if (FAILED(hr = CreateDepthStencil())) return hr;
 		if (FAILED(hr = CreateConstantBuffer())) return hr;
-		//if (FAILED(hr = CreateTextureBuffer())) return hr;
-		//if (FAILED(hr = CreateSamplerBuffer())) return hr;
+		if (FAILED(hr = CreateSamplerBuffer())) return hr;
 		auto* scene = g_pSceneManager->GetSceneForRendering();
+		for(auto _it : scene->Materials)
+		{
+			auto material = _it.second;
+			if(material)
+			{
+				auto color = material->GetBaseColor();
+				if(auto texture = color.value_map_)
+					ThrowIfFailed(hr = CreateTextureBuffer(*texture));
+			}
+		}
 		if (scene != nullptr) {
 			auto pGeometryNode = scene->GetFirstGeometryNode();
 			int32_t n = 0;
@@ -136,9 +147,18 @@ namespace Engine
 						draw_batch_context_[n].object_matrix = Transpose(*pGeometryNode->GetCalculatedTransform());
 						draw_batch_context_[n].normal_matrix = MatrixInversetranspose(draw_batch_context_[n].object_matrix);
 						auto mat = scene->GetMaterial(pGeometryNode->GetMaterialRef(0));
-						draw_batch_context_[n].base_color = mat->GetColor(SceneObjectMaterial::kDiffuse).value_;
-						draw_batch_context_[n].specular_color = mat->GetColor(SceneObjectMaterial::kSpecular).value_;
-						draw_batch_context_[n].specular_power = mat->GetParameter(SceneObjectMaterial::kSpecularFactor).value_;
+						if(mat != nullptr)
+						{
+							draw_batch_context_[n].base_color = mat->GetColor(SceneObjectMaterial::kDiffuse).value_;
+							draw_batch_context_[n].specular_color = mat->GetColor(SceneObjectMaterial::kSpecular).value_;
+							draw_batch_context_[n].specular_power = mat->GetParameter(SceneObjectMaterial::kSpecularFactor).value_;
+						}
+						else
+						{
+							draw_batch_context_[n].base_color = Vector4f(1.f);
+							draw_batch_context_[n].specular_color = Vector4f(1.f);
+							draw_batch_context_[n].specular_power = 8.f;
+						}
 						n += draw_batch_context_.size() - pre_load_vex_arr_count;
 					}
 				}
@@ -163,7 +183,6 @@ namespace Engine
 			Matrix4x4f projection{};	
 			//lenth is cm			
 			p_cam_mgr_ = std::make_unique<CameraManager>();
-
 			BuildViewMatrixLookAtLH(view, Vector3f{ 0.f, 0.0f, -1000.f }, Vector3f{ 0.0f, 0.0f, 1000.f }, Vector3f{ 0.0f, 1.0f, 0.0f });
 			BuildPerspectiveFovLHMatrix(projection, 1.57F, aspect, 100.f, 100000.f);
 			draw_frame_context_.view_matrix_ = Transpose(p_cam_mgr_->GetCamera().GetView());
@@ -191,7 +210,8 @@ namespace Engine
 		D3D12_INPUT_ELEMENT_DESC ied[] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 		};
 		vertex_buf_per_frame_num_ = _countof(ied);
 		//TODO: Create D3D12_RASTERIZER_DESC D3D12_RENDER_TARGET_BLEND_DESC D3D12_BLEND_DESC D3D12_DEPTH_STENCILOP_DESC D3D12_DEPTH_STENCIL_DESC
@@ -259,6 +279,13 @@ namespace Engine
 			srv_cbv_uavHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 			if (FAILED(hr = p_device_->CreateDescriptorHeap(&srv_cbv_uavHeapDesc, IID_PPV_ARGS(p_cbv_heap_.GetAddressOf())))) return hr;
 			cbv_srv_uav_desc_size_ = p_device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		}
+		{
+			D3D12_DESCRIPTOR_HEAP_DESC samplerHeapDesc = {};
+			samplerHeapDesc.NumDescriptors = kMaxTextureCount; // this is the max D3d12 HW support currently
+			samplerHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+			samplerHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+			if (FAILED(hr = p_device_->CreateDescriptorHeap(&samplerHeapDesc, IID_PPV_ARGS(p_sampler_heap_.GetAddressOf())))) return hr;
 		}
 		//Create CommandAllocator
 		if(FAILED(hr = p_device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(p_cmdalloc_.GetAddressOf())))) return hr;
@@ -328,12 +355,16 @@ namespace Engine
 		{
 			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 		}
-		CD3DX12_ROOT_PARAMETER1 rootParameters[2];
-		CD3DX12_DESCRIPTOR_RANGE1 cbv_table[2];
+		CD3DX12_ROOT_PARAMETER1 rootParameters[4];
+		CD3DX12_DESCRIPTOR_RANGE1 cbv_table[4];
 		cbv_table[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV,1,0);
 		cbv_table[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV,1,1);
+		cbv_table[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV,1,0);
+		cbv_table[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,1,0);
 		rootParameters[0].InitAsDescriptorTable(1, &cbv_table[0]);
 		rootParameters[1].InitAsDescriptorTable(1, &cbv_table[1]);
+		rootParameters[2].InitAsDescriptorTable(1, &cbv_table[2]);
+		rootParameters[3].InitAsDescriptorTable(1, &cbv_table[3]);
 		// Allow input layout and deny uneccessary access to certain pipeline stages.
 		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
@@ -370,7 +401,7 @@ namespace Engine
 	{
 		HRESULT hr =S_OK;
 		p_cmdlist_->SetGraphicsRootSignature(p_rootsig_.Get());
-		ID3D12DescriptorHeap* ppHeaps[] = { p_cbv_heap_.Get() };
+		ID3D12DescriptorHeap* ppHeaps[] = { p_cbv_heap_.Get(),p_sampler_heap_.Get() };
 		p_cmdlist_->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 		 //Get the background buffer per-frame-cbv descriptor handle
 		D3D12_GPU_DESCRIPTOR_HANDLE cbv_handle[2];
@@ -380,12 +411,16 @@ namespace Engine
 		p_cmdlist_->SetGraphicsRootDescriptorTable(0, cbv_handle[0]);
 		p_cmdlist_->RSSetViewports(1, &vp_);
 		p_cmdlist_->RSSetScissorRects(1, &rect_);
+		p_cmdlist_->SetGraphicsRootDescriptorTable(3,p_sampler_heap_->GetGPUDescriptorHandleForHeapStart());
 		p_cmdlist_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		for(uint32_t i = 0; i < draw_batch_context_.size(); i++) {
 			SetPerBatchShaderParameters(i);
 			cbv_handle[1].ptr = cbv_handle[0].ptr + cbv_srv_uav_desc_size_ * (i + 1);
 			p_cmdlist_->SetGraphicsRootDescriptorTable(1, cbv_handle[1]);
-			p_cmdlist_->IASetVertexBuffers(0, 2, &vertex_buf_view_[i * vertex_buf_per_frame_num_]);
+			p_cmdlist_->IASetVertexBuffers(0, 3, &vertex_buf_view_[i * vertex_buf_per_frame_num_]);
+			D3D12_GPU_DESCRIPTOR_HANDLE srvHandle;
+			srvHandle.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + 0) * cbv_srv_uav_desc_size_;
+			p_cmdlist_->SetGraphicsRootDescriptorTable(2,srvHandle);
 			// select which index buffer to use
 			//p_cmdlist_->IASetIndexBuffer(&index_buf_view_[i]);
 			// draw the vertex buffer to the back buffer
@@ -448,6 +483,82 @@ namespace Engine
 		if (FAILED(hr = InitializeShader("Shader/vs.cso", "Shader/ps.cso"))) return hr; //5
 		if (FAILED(hr = InitializeBuffers())) return hr;
 		return hr;
+	}
+	HRESULT D3d12GraphicsManager::CreateSamplerBuffer()
+	{
+		// Describe and create a sampler.
+		D3D12_SAMPLER_DESC samplerDesc = {};
+		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		samplerDesc.MinLOD = 0;
+		samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+		samplerDesc.MipLODBias = 0.0f;
+		samplerDesc.MaxAnisotropy = 1;
+		samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		p_device_->CreateSampler(&samplerDesc, p_sampler_heap_->GetCPUDescriptorHandleForHeapStart());
+		return S_OK;
+	}
+	HRESULT D3d12GraphicsManager::CreateTextureBuffer(SceneObjectTexture& texture)
+	{
+		HRESULT hr = S_OK;
+		auto it = texture_index_.find(texture.GetName());
+		if(it == texture_index_.end())
+		{
+			auto image = texture.GetImage();
+			// Describe and create a Texture2D.
+			ComPtr<ID3D12Resource> pTextureGPU;
+			ComPtr<ID3D12Resource> pTextureUpload;
+			D3D12_RESOURCE_DESC textureDesc = {};
+			textureDesc.MipLevels = 1;
+			textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			textureDesc.Width = image.width;
+			textureDesc.Height = image.height;
+			textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+			textureDesc.DepthOrArraySize = 1;
+			textureDesc.SampleDesc.Count = 1;
+			textureDesc.SampleDesc.Quality = 0;
+			textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+			CD3DX12_HEAP_PROPERTIES heap_prop(D3D12_HEAP_TYPE_DEFAULT);
+			ThrowIfFailed(hr = p_device_->CreateCommittedResource(&heap_prop, D3D12_HEAP_FLAG_NONE, &textureDesc, D3D12_RESOURCE_STATE_COPY_DEST,
+				nullptr, IID_PPV_ARGS(pTextureGPU.GetAddressOf())));
+			const UINT subresourceCount = textureDesc.DepthOrArraySize * textureDesc.MipLevels;
+			const UINT64 uploadBufferSize = GetRequiredIntermediateSize(pTextureGPU.Get(), 0, subresourceCount);
+			heap_prop.Type = D3D12_HEAP_TYPE_UPLOAD;
+			auto upload_buf_desc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+			hr = p_device_->CreateCommittedResource(&heap_prop, D3D12_HEAP_FLAG_NONE, &upload_buf_desc, D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr, IID_PPV_ARGS(pTextureUpload.GetAddressOf()));
+			//ThrowIfFailed();
+			D3D12_SUBRESOURCE_DATA textureData = {};
+			textureData.pData = image.data;
+			textureData.RowPitch = image.pitch;
+			textureData.SlicePitch = image.pitch * image.height * 4;
+			UpdateSubresources(p_cmdlist_.Get(), pTextureGPU.Get(), pTextureUpload.Get(), 0, 0, subresourceCount, &textureData);
+			D3D12_RESOURCE_BARRIER barrier = {};
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			barrier.Transition.pResource = pTextureGPU.Get();
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
+			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+			p_cmdlist_->ResourceBarrier(1, &barrier);
+			// Describe and create a SRV for the texture.
+			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srvDesc.Format = textureDesc.Format;
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srvDesc.Texture2D.MipLevels = -1;
+			srvDesc.Texture2D.MostDetailedMip = 0;
+			D3D12_CPU_DESCRIPTOR_HANDLE srvHandle;
+			int32_t texture_id = texture_index_.size();
+			srvHandle.ptr = p_cbv_heap_->GetCPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_id) * cbv_srv_uav_desc_size_;
+			p_device_->CreateShaderResourceView(pTextureGPU.Get(), &srvDesc, srvHandle);
+			texture_index_[texture.GetName()] = texture_id;
+			buffers_.push_back(pTextureUpload.Get());
+			textures_.push_back(pTextureGPU.Get());
+		}
+		else return hr;
 	}
 	HRESULT D3d12GraphicsManager::CreateConstantBuffer()
 	{
@@ -527,7 +638,7 @@ namespace Engine
 		index_buf_view_.push_back(indexBufferView);
 		buffers_.push_back(pIndexBufferGPU);
 		buffers_.push_back(pIndexBufferUpdate);
-		DrawBatchContext dbc;
+		DrawBatchConstants dbc;
 		dbc.count = index_array.GetIndexCount();
 		draw_batch_context_.push_back(std::move(dbc));
 		return hr;
@@ -541,7 +652,6 @@ namespace Engine
 			NE_LOG(ALL,kWarning,"some vertex_array has 0 data size")
 			return hr;
 		}
-		//create heap and resource desc
 		D3D12_HEAP_PROPERTIES heap_properties = {};
 		heap_properties.Type = D3D12_HEAP_TYPE_DEFAULT;
 		heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
@@ -593,7 +703,7 @@ namespace Engine
 		buffers_.emplace_back(std::move(pVertexBufferUpdate));
 		if (vertex_array.GetType() == EVertexArrayType::kVertex)
 		{
-			DrawBatchContext dbc{};
+			DrawBatchConstants dbc{};
 			dbc.count = vertex_array.GetVertexCount();
 			draw_batch_context_.push_back(std::move(dbc));
 		}

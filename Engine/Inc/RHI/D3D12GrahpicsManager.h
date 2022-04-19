@@ -11,7 +11,7 @@ namespace Engine
 {
     class D3d12GraphicsManager : public GraphicsManager
     {
-        struct DrawBatchContext 
+        struct DrawBatchConstants
         {
             Matrix4x4f object_matrix;
             Matrix4x4f normal_matrix;
@@ -19,6 +19,12 @@ namespace Engine
             Vector4f specular_color;
             float specular_power;
             int32_t count;
+        };
+        struct DrawBatchContext
+        {
+            INT32 count;
+            std::shared_ptr<SceneGeometryNode> node;
+            std::shared_ptr<SceneObjectMaterial> material;
         };
     public:
         int Initialize() override;
@@ -39,7 +45,7 @@ namespace Engine
         HRESULT CreateDepthStencil();
         HRESULT CreateGraphicsResources();
         HRESULT CreateSamplerBuffer();
-        HRESULT CreateTextureBuffer();
+        HRESULT CreateTextureBuffer(SceneObjectTexture& texture);
         HRESULT CreateConstantBuffer();
         HRESULT CreateIndexBuffer(const SceneObjectIndexArray& index_array);
         HRESULT CreateVertexBuffer(const SceneObjectVertexArray& vertex_array);
@@ -80,11 +86,13 @@ namespace Engine
         std::vector<ComPtr<ID3D12Resource>>    buffers_;                          // the pointer to the vertex buffer
         std::vector<D3D12_VERTEX_BUFFER_VIEW>       vertex_buf_view_;                 // a view of the vertex buffer
         std::vector<D3D12_INDEX_BUFFER_VIEW>        index_buf_view_;                  // a view of the index buffer
-        std::vector<DrawBatchContext> draw_batch_context_;
-        ComPtr<ID3D12Resource> p_texture_buf_;
+        std::vector<DrawBatchConstants> draw_batch_context_;
+        std::vector<ComPtr<ID3D12Resource>> textures_;
+        std::map<std::string,INT32> texture_index_;
+        
         uint8_t* p_cbv_data_begin_ = nullptr;
         // CB size is required to be 256-byte aligned.
-        static constexpr size_t				kSizePerBatchConstantBuffer = (sizeof(DrawBatchContext) + 255) & 256; 
+        static constexpr size_t				kSizePerBatchConstantBuffer = (sizeof(DrawBatchConstants) + 255) & 256;
         static constexpr size_t				kSizePerFrameConstantBuffer = (sizeof(DrawFrameContext) + 255) & 256; // CB size is required to be 256-byte aligned.
         static constexpr size_t				kSizeConstantBufferPerFrame = kSizePerFrameConstantBuffer + kSizePerBatchConstantBuffer * kMaxSceneObjectCount;
         // Synchronization objects

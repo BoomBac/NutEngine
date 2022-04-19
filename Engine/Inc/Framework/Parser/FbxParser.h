@@ -18,6 +18,7 @@ namespace Engine
 		virtual ~FbxParser();
 		unique_ptr<Scene> Parse(const std::string & file_path) override;
 	private:
+		inline static const char* kAssetTexturePath = "H:/Project_VS2019/NutEngine/Engine/Asset/Img/";
 		std::unordered_map<string, std::shared_ptr<BaseSceneObject>> scene_objects_;
 		FbxManager* fbx_manager_;
 		FbxIOSettings* fbx_ios_;
@@ -26,9 +27,11 @@ namespace Engine
 		void GenerateCamera(const fbxsdk::FbxCamera* camera, Scene& scene);
 		void GenerateMaterial(const fbxsdk::FbxSurfaceMaterial* mat, Scene& scene);
 		void GenerateLight(const fbxsdk::FbxLight* light, Scene& scene);
-		void GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::FbxMesh* mesh, Scene& scene);
-		void ReadNormal(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh);
-		void ReadVertex(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh);
+		bool GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::FbxMesh* mesh, Scene& scene);
+		bool ReadNormal(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh);
+		bool ReadVertex(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh);
+		bool ReadUVs(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh);
+		void CopyTexture(std::string src, std::string dst, std::string name);
 		bool ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object,std::shared_ptr<BaseSceneNode>& base_node,Scene& scene, fbxsdk::FbxScene* fbx_scene);
 		Vector4f FbxToNutVector4f(fbxsdk::FbxDouble3 in)
 		{
