@@ -144,6 +144,18 @@
     <ClInclude Include="Inc\Framework\Common\CameraManager.h">
       <Filter>Inc\Framework\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\Global.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\Log.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\ThreadPool.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\TimerManager.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -195,6 +207,12 @@
       <Filter>Src\Framework\Common</Filter>
     </ClCompile>
     <ClCompile Include="Src\Framework\Common\CameraManager.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Common\Log.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Common\TimerManager.cpp">
       <Filter>Src\Framework\Common</Filter>
     </ClCompile>
   </ItemGroup>

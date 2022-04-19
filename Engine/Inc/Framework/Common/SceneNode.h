@@ -68,6 +68,11 @@ namespace Engine
 		using SceneNode::AddSceneObjectRef;
 		void AddMaterialRef(const std::string& key) { materials_.push_back(key); };
 		void AddMaterialRef(const std::string&& key) { materials_.push_back(key); };
+		std::string GetMaterialRef(const size_t index)
+		{
+			if(index < materials_.size()) return materials_[index];
+			else return std::string{};
+		}
 	protected:
 		bool        b_visible_;
 		bool        b_shadow_;

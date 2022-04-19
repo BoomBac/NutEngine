@@ -11,16 +11,14 @@ namespace Engine
 {
     class D3d12GraphicsManager : public GraphicsManager
     {
-        //
         struct DrawBatchContext 
         {
             Matrix4x4f object_matrix;
             Matrix4x4f normal_matrix;
+            Vector4f base_color;
+            Vector4f specular_color;
+            float specular_power;
             int32_t count;
-            float color;
-            //std::shared_ptr<Matrix4x4f> transform;
-            //std::shared_ptr<SceneObjectMaterial> material;
-            //DirectX::XMMATRIX  m_modelViewProjection;       
         };
     public:
         int Initialize() override;
@@ -44,9 +42,7 @@ namespace Engine
         HRESULT CreateTextureBuffer();
         HRESULT CreateConstantBuffer();
         HRESULT CreateIndexBuffer(const SceneObjectIndexArray& index_array);
-        HRESULT CreateIndexBuffer();
         HRESULT CreateVertexBuffer(const SceneObjectVertexArray& vertex_array);
-        HRESULT CreateVertexBuffer();
         HRESULT CreateRootSignature();
         HRESULT WaitForPreviousFrame();
         HRESULT PopulateCommandList();

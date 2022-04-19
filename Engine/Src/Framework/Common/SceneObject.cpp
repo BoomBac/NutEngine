@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "Framework/Common/SceneNode.h"
-#include <directxmath.h>
+#include "Framework/Common/Log.h"
 
 
 namespace Engine
@@ -101,4 +101,48 @@ namespace Engine
 			b_dirty_ = false;
 		}
 	}
+	//------------------------Material
+	void SceneObjectMaterial::SetColor(EMaterialProperty type, Vector4f color)
+	{
+		if(type == kDiffuse) base_color_ = color;
+		else if (type == kSpecular)  specular_ = color;
+	}
+
+	void SceneObjectMaterial::SetParam(EMaterialProperty type, float param)
+	{
+		if (type == kSpecularFactor) specular_power_ = param;
+	}
+
+	Color SceneObjectMaterial::GetColor(EMaterialProperty type) const
+	{
+		if(type == kDiffuse) return base_color_;
+		else if(type == kSpecular) return specular_;
+		NE_LOG(ALL,kWarning,"{} is missing,will return 0.f",kPropertyStrArr[type])
+		return Color();
+	}
+
+	Parameter SceneObjectMaterial::GetParameter(EMaterialProperty type) const
+	{
+		if(type == kSpecularFactor) return specular_power_;
+		NE_LOG(ALL, kWarning, "{} is missing,will return 0.f", kPropertyStrArr[type])
+		return 0.f;
+	}
+
+	//Color SceneObjectMaterial::GetColor(std::string name) const
+	//{
+	//	if (name == "diffuse") return base_color_;
+	//	else if (name == "specular") return sepcular_;
+	//	else if (name == "emission")  return emission_;
+	//	else if (name == "opacity") return opacity_;
+	//	else if (name == "transparency") return transparency_;
+	//}
+
+	//Parameter SceneObjectMaterial::GetParameter(std::string name) const
+	//{
+	//	if (name == "specular_power") return specular_power_;
+	//	else if (name == "metallic")  return metallic_;
+	//	else if (name == "roughness")  return roughness_;
+	//	else if (name == "abient_occlusion")  return abient_occlusion_;
+	//}
+
 }

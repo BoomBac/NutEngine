@@ -1,11 +1,13 @@
 #include "editor.h"
 #include "stdafx.h"
 #include "Inc/QTApplication.h"
-#include "../Inc/RHI/D3D12GrahpicsManager.h"
-#include "../Inc/Framework/Common/AssetLoader.h"
-#include "../Inc/Framework/Common/MemoryManager.hpp"
+#include "RHI/D3D12GrahpicsManager.h"
+#include "Framework/Common/AssetLoader.h"
+#include "Framework/Common/MemoryManager.hpp"
 #include "Framework/Common/InputManager.h"
-#include "log.h"
+#include "Framework/Common/Log.h"
+#include "Framework/Common/Global.h"
+#include "Framework/Common/TimerManager.h"
 
 namespace Engine
 {
@@ -16,30 +18,43 @@ namespace Engine
     AssetLoader* g_pAssetLoader = new AssetLoader();
     MemoryManager* g_pMemoryManager = new MemoryManager();
     InputManager* g_InputManager = new InputManager();
+    LogManager* g_pLogManager = new LogManager();
+    TimerManager* g_pTimerManager = new TimerManager();
 }
+using namespace Engine;
 using Engine::g_pApp;
 using Engine::g_pGraphicsManager;
 using Engine::g_pMemoryManager;
 using Engine::g_pAssetLoader;
 using Engine::g_pSceneManager;
 using Engine::g_InputManager;
+using Engine::g_pLogManager;
+using Engine::g_pTimerManager;
+
 
 int main(int argc, char *argv[])
 {
-    g_pApp->Initialize();
-    g_pMemoryManager->Initialize();
-    g_pAssetLoader->Initialize();
-
+    Engine::LoadConfigFile("H:/Project_VS2019/NutEngine/Engine/config.ini");
+    int error = 0;
+    error += g_pLogManager->Initialize();
+    error += g_pApp->Initialize();
+    error += g_pTimerManager->Initialize();
+    error += g_pMemoryManager->Initialize();
+    error += g_pAssetLoader->Initialize();
+    error += g_pSceneManager->Initialize();
+    assert(error==0);
     g_pAssetLoader->AddSearchPath("H:/Project_VS2019/NutEngine/Engine");
+    g_pSceneManager->LoadScene();
+    error += g_pGraphicsManager->Initialize();
+    error += g_InputManager->Initialize();
+    assert(error==0);
+    NE_LOG(ALL, kWarning, "Editor launch")
+    g_pTimerManager->Reset();
     auto p_main_window = dynamic_cast<QTApplication*>(g_pApp)->GetMainWindow();
-    g_pSceneManager->LoadScene("hair.fbx");
-    g_pGraphicsManager->Initialize();
-    g_InputManager->Initialize();
-
-
     while (p_main_window->isVisible())
     {
         g_pApp->Tick();
+        g_pTimerManager->Tick();
         g_pGraphicsManager->Clear();
         g_pGraphicsManager->Draw();
     }
@@ -48,6 +63,6 @@ int main(int argc, char *argv[])
     g_InputManager->Finalize();
     g_pMemoryManager->Finalize();
     g_pAssetLoader->Finalize();
-    
+    g_pLogManager->Finalize();
     return 0;
 }

@@ -152,18 +152,18 @@ void Engine::GraphicsManager::CalculateLights()
     auto* scene = g_pSceneManager->GetSceneForRendering();
     auto pLightNode = scene->GetFirstLightNode();
     if (pLightNode) {
-        draw_frame_context_.light_position_ = { 0.0f, 0.0f, 0.0f };
-        TransformCoord(draw_frame_context_.light_position_, *pLightNode->GetCalculatedTransform());
+        //draw_frame_context_.light_position_ = { 0.0f, 0.0f, 0.0f };
+        //TransformCoord(draw_frame_context_.light_position_, *pLightNode->GetCalculatedTransform());
 
-        auto pLight = scene->GetLight(pLightNode->GetSceneObjectRef());
-        if (pLight) {
-            draw_frame_context_.light_color_ = pLight->GetColor().value_;
-        }
+        //auto pLight = scene->GetLight(pLightNode->GetSceneObjectRef());
+        //if (pLight) {
+        //   // draw_frame_context_.light_color_ = pLight->GetColor().value_.xyz;
+        //}
     }
     else {
         // use default build-in light 
-        draw_frame_context_.light_position_ = { -1.0f, -5.0f, 0.0f };
-        draw_frame_context_.light_color_ = { 1.0f, 1.0f, 1.0f, 1.0f };
+        //draw_frame_context_.light_position_ = { -1.0f, -5.0f, 0.0f };
+        //draw_frame_context_.light_color_ = { 1.0f, 1.0f, 1.0f};
     }
 }
 

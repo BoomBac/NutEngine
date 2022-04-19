@@ -19,10 +19,17 @@
 #include <exception>
 #include <cassert>
 #include <string>
+#include <sstream>
 #include <memory>
 #include <iostream>
 #include <vector>
 #include <unordered_map>
+#include <map>
+#include <fstream>
+#include <utility>
+#include <queue>
+#include <list>
+#include <functional>
 
 
 inline void ThrowIfFailed(HRESULT hr)

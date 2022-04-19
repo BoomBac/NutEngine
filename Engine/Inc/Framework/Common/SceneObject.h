@@ -258,43 +258,46 @@ namespace Engine
     class SceneObjectMaterial : public BaseSceneObject
     {
     public:
+        enum EMaterialProperty
+        {
+            kDiffuse,
+            kSpecular,
+            kSpecularFactor
+        };
+        inline static const char* kPropertyStrArr[]{"diffuse","specular","specular_factor"};
+
         SceneObjectMaterial(const std::string& name) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeMaterial), name_(name) {};
         SceneObjectMaterial(std::string&& name) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeMaterial), name_(std::move(name)) {};
-        SceneObjectMaterial(const std::string& name = "", Color&& base_color = Vector4f(1.0f), Parameter&& metallic = 0.0f, Parameter&& roughness = 0.0f, 
-            Normal&& normal = Vector3f(0.0f, 0.0f, 1.0f), Parameter&& specular = 0.0f, Parameter&& ao = 0.0f) : 
+        SceneObjectMaterial(const std::string& name = "default_material", Color&& base_color = Vector4f(1.0f), Parameter&& metallic = 0.0f, Parameter&& roughness = 0.0f, 
+            Normal&& normal = Vector3f(0.0f, 0.0f, 1.0f), Color&& specular = Vector4f(1.0f), Parameter&& specular_power = 2.f,Parameter&& ao = 0.0f,Color&& opacity = Vector4f(0.f),Color&& transparency = Vector4f(0.f),
+            Color&& emission = Vector4f(0.f)) :
             BaseSceneObject(ESceneObjectType::kSceneObjectTypeMaterial), name_(name), base_color_(std::move(base_color)), metallic_(std::move(metallic)),
-            roughness_(std::move(roughness)), normal_(std::move(normal)), specularE(std::move(specular)), abient_occlusion_(std::move(ao)) {};
+            roughness_(std::move(roughness)), normal_(std::move(normal)), specular_(std::move(specular)),specular_power_(std::move(specular_power)), abient_occlusion_(std::move(ao))
+            ,opacity_(std::move(opacity)),transparency_(std::move(transparency)),emission_(emission) {};
         void SetName(const std::string& name) { name_ = name; };
         void SetName(std::string&& name) { name_ = std::move(name); };
-        void SetColor(std::string attrib, Vector4f& color)
-        {
-            if (attrib == "diffuse") {
-                base_color_ = Color(color);
-            }
-        };
-        void SetParam(std::string& attrib, float param)
-        {
-        };
-        void SetTexture(std::string& attrib, std::string& textureName)
-        {
-            if (attrib == "diffuse") {
-                base_color_ = std::make_shared<SceneObjectTexture>(textureName);
-            }
-        };
-        void SetTexture(std::string& attrib, std::shared_ptr<SceneObjectTexture>& texture)
-        {
-            if (attrib == "diffuse") {
-                base_color_ = texture;
-            }
-        };
+        /// <param name="name">diffuse dispecular emission opacity transparency</param>
+        /// <param name="color"></param>
+        void SetColor(EMaterialProperty type, Vector4f color);
+        /// <param name="name">metallic roughness specular_power abient_occlusion</param>
+        /// <param name="param"></param>
+        void SetParam(EMaterialProperty type, float param);
+        Color GetColor(EMaterialProperty type) const;
+        Parameter GetParameter(EMaterialProperty type) const;
+        void SetTexture(std::string& attrib, std::string& textureName);
+        void SetTexture(std::string& attrib, std::shared_ptr<SceneObjectTexture>& texture);
     protected:
         std::string name_;
         Color       base_color_;
         Parameter   metallic_;
         Parameter   roughness_;
         Normal      normal_;
-        Parameter   specularE;
+        Color       specular_;
+        Parameter   specular_power_;
         Parameter   abient_occlusion_;
+        Color       opacity_;
+        Color       transparency_;
+        Color       emission_;
     };
 
     class SceneObjectGeometry : public BaseSceneObject

@@ -45,8 +45,10 @@ namespace Engine
 			Matrix4x4f  world_matrix_;
 			Matrix4x4f  view_matrix_;
 			Matrix4x4f  projection_matrix_;
-			Vector3f    light_position_;
+			Vector4f    ambient_color_;
 			Vector4f    light_color_;
+			Vector4f    light_position_;
+			Vector4f	camera_position_;
 		};
 		DrawFrameContext    draw_frame_context_;
 		//temp
