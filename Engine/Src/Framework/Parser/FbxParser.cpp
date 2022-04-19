@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Framework/Parser/FbxParser.h"
-
-#include <future>
+#include "Framework/Common/TimerManager.h"
+#include "Framework/Common/Log.h"
 
 using namespace Engine;
 
@@ -19,6 +19,7 @@ Engine::FbxParser::FbxParser()
 	fbx_ios_ = FbxIOSettings::Create(fbx_manager_, IOSROOT);
 	fbx_manager_->SetIOSettings(fbx_ios_);
 	fbx_importer_ = FbxImporter::Create(fbx_manager_, "");
+	p_thread_pool_ = make_unique<ThreadPool>();
 }
 
 Engine::FbxParser::~FbxParser()
@@ -28,17 +29,14 @@ Engine::FbxParser::~FbxParser()
 	fbx_manager_->Destroy();
 }
 
-unique_ptr<Scene> Engine::FbxParser::Parse(const std::string& buf)
+unique_ptr<Scene> Engine::FbxParser::Parse(const std::string & file_path)
 {
-	auto abs_path = g_pAssetLoader->GetAbsolutePath((buf.c_str()));
-
+	g_pTimerManager->Mark();
 	FbxScene* fbx_scene = FbxScene::Create(fbx_manager_, "RootScene");
-	if (fbx_importer_ != nullptr && !fbx_importer_->Initialize(abs_path.c_str(), -1, fbx_manager_->GetIOSettings())) {
+	if (fbx_importer_ != nullptr && !fbx_importer_->Initialize(file_path.c_str(), -1, fbx_manager_->GetIOSettings())) {
 		return nullptr;
 	}
 	fbx_importer_->Import(fbx_scene);
-	//printf("Call to FbxImporter::Initialize() failed.\n");
-	//printf("Error returned: %s\n\n", importer->GetStatus().GetErrorString());
 	unique_ptr<Scene> nut_scene(new Scene("Fbx Scene"));
 	std::shared_ptr<BaseSceneNode> root_node = make_shared<BaseSceneNode>("scene_root");
 	FbxNode* fbx_rt = fbx_scene->GetRootNode();
@@ -62,11 +60,12 @@ unique_ptr<Scene> Engine::FbxParser::Parse(const std::string& buf)
 			ConvertFbxConstructToSceneNode(fbx_rt->GetChild(i), root_node,*nut_scene,fbx_scene);
 		}
 	}
+	NE_LOG(ALL,kWarning,"Parse scene completed,cost {} ms",g_pTimerManager->GetDeltaTime())
 	fbx_scene->Destroy();
 	return nut_scene;
 }
 
-void Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, std::shared_ptr<BaseSceneNode>& base_node, Scene& scene, fbxsdk::FbxScene* fbx_scene)
+bool Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, std::shared_ptr<BaseSceneNode>& base_node, Scene& scene, fbxsdk::FbxScene* fbx_scene)
 {
 	std::shared_ptr<BaseSceneNode> node;
 	string object_name = object->GetName();
@@ -132,6 +131,7 @@ void Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, 
 	for(int32_t i = 0; i < object->GetChildCount(); i++) {
 		ConvertFbxConstructToSceneNode(object->GetChild(i),node,scene, fbx_scene);
 	}
+	return true;
 }
 
 std::shared_ptr<SceneObjectTransform> Engine::FbxParser::GenerateTransform(fbxsdk::FbxNode* p_node)
@@ -248,8 +248,17 @@ void FbxParser::GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::F
 	}
 	//The vertex must be added to the MeshObject's vector before the normal, 
 	//because the input layout is passed in the vertex-normal order
-	ReadVertex(*mesh, nut_mesh);
-	ReadNormal(*mesh, nut_mesh);
+	//not thread seaf
+	auto ret1 = p_thread_pool_->Enqueue([&]()->bool{
+		ReadVertex(*mesh, nut_mesh);
+		return true;
+		});
+	auto ret2 = p_thread_pool_->Enqueue([&]()->bool {
+		ReadNormal(*mesh, nut_mesh);
+		return true;
+		});
+	ret1.get();
+	ret2.get();
 	geo->AddMesh(nut_mesh);
 	scene.Geometries[mesh->GetName()] = geo;
 }
@@ -304,8 +313,10 @@ void Engine::FbxParser::ReadNormal(const fbxsdk::FbxMesh& mesh, std::shared_ptr<
 			}
 		}
 	}
-	SceneObjectVertexArray& _v_array = *new SceneObjectVertexArray(EVertexArrayType::kVertex, 0u, EVertexDataType::kVertexDataFloat3,
+	SceneObjectVertexArray& _v_array = *new SceneObjectVertexArray(EVertexArrayType::kNormal, 0u, EVertexDataType::kVertexDataFloat3,
 		data, vertex_count);
+	if(vertex_count == 0)
+		NE_LOG(ALL,kError,"{}'s normal with 0 vertex",mesh.GetName())
 	nut_mesh->AddVertexArray(std::move(_v_array));
 }
 
@@ -329,6 +340,8 @@ void Engine::FbxParser::ReadVertex(const fbxsdk::FbxMesh& mesh, std::shared_ptr<
 		}
 	}
 	EVertexDataType vertex_type = EVertexDataType::kVertexDataFloat3;
-	SceneObjectVertexArray& _v_array = *new SceneObjectVertexArray(EVertexArrayType::kNormal, 0u, vertex_type, vertex_buf, vertex_count);
+	SceneObjectVertexArray& _v_array = *new SceneObjectVertexArray(EVertexArrayType::kVertex, 0u, vertex_type, vertex_buf, vertex_count);
+	if (vertex_count == 0)
+		NE_LOG(ALL, kError, "{}'s vertex with 0 vertex", mesh.GetName())
 	nut_mesh->AddVertexArray(std::move(_v_array));
 }

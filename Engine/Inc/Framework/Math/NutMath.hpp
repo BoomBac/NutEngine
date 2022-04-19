@@ -240,6 +240,7 @@ namespace Engine
 		operator const T* () const { return static_cast<const T*>(&data[0][0]); };
 	};
 	using Matrix4x4f = Matrix<float, 4, 4>;
+	using Matrix3x3f = Matrix<float, 3, 3>;
 
 	template<typename T, int rows, int cols>
 	std::string MatrixToString(Matrix<T, rows, cols> mat)
@@ -450,6 +451,55 @@ namespace Engine
 		}} };
 		return result;
 	}
+
+	template <typename T, int n>
+	static auto SubMatrix(const Matrix<T, n, n>& mat, const int& r, const int& c)->Matrix<T, n - 1, n - 1>
+	{
+		int i = 0, j = 0;
+		Matrix<T, n - 1, n - 1> temp{};
+		for (int row = 0; row < n; row++) 
+		{
+			for (int col = 0; col < n; col++) 
+			{
+				if (row != r && col != c) 
+				{
+					temp[i][j++] = mat[row][col];
+					if (j == n - 1) 
+					{
+						j = 0;
+						i++;
+					}
+				}
+			}
+		}
+		return temp;
+	}
+
+	static float MatrixDeterminat(Matrix3x3f matrix)
+	{
+		float ret = 0.f, sign = 1.f;
+		for (int i = 0; i < 3; ++i)
+		{
+			Matrix<float, 2, 2> mat2 = SubMatrix(matrix, 0, i);
+			ret += sign * matrix[0][i] * (mat2[0][0] * mat2[1][1] - mat2[0][1] * mat2[1][0]);
+			sign = -sign;
+		}
+		return ret;
+	}
+	//The floating point type will have a small deviation from the library implementation, 
+	//in addition there is a +-0 problem
+	static float MatrixDeterminat(const Matrix4x4f& matrix)
+	{
+		float ret = 0.F,sign = 1.F;
+		for (int i = 0; i < 4; ++i)
+		{
+			ret += sign * matrix[0][i] * MatrixDeterminat(SubMatrix(matrix, 0, i));
+			sign = -sign;
+		}
+		return ret;
+	}
+
+
 	static void BuildIdentityMatrix(Matrix4x4f& matrix)
 	{
 		Matrix4x4f identity = { {{
@@ -470,6 +520,28 @@ namespace Engine
 			{ 0.0f, 0.0f, 0.0f, 1.0f}
 		}} };
 		return identity;
+	}
+
+	static void MatrixInverse(Matrix4x4f& mat)
+	{
+		Matrix4x4f adj{};
+		for(int i = 0; i < 4; ++i)
+		{
+			for(int j = 0; j < 4; ++j)
+			{
+				auto sub = SubMatrix(mat, i, j);
+				adj[i][j] = MatrixDeterminat(sub) * powf(-1.f, static_cast<float>((i + j)));
+			}
+		}
+		float f = MatrixDeterminat(mat);
+		if(f == 0) return;
+		mat = Transpose(adj);
+	}
+	//The matrix is first inverted and then transposed to obtain the matrix with the correct transformation normals
+	static Matrix4x4f MatrixInversetranspose(Matrix4x4f mat)
+	{
+		MatrixInverse(mat);
+		return Transpose(mat);
 	}
 	static void BuildPerspectiveFovLHMatrix(Matrix4x4f& matrix, const float fieldOfView, const float screenAspect, const float screenNear, const float screenDepth)
 	{

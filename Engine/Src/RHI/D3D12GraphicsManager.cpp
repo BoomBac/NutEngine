@@ -4,7 +4,7 @@
 #include "Framework/Common/Buffer.h"
 #include "Framework/Common/AssetLoader.h"
 #include "Framework/Common/SceneManager.h"
-#include <directxmath.h>
+#include "Framework/Common/Log.h"
 
 
 
@@ -130,17 +130,12 @@ namespace Engine
 						const SceneObjectVertexArray& v_property_array = pMesh->GetVertexPropertyArray(i);
 						CreateVertexBuffer(v_property_array);
 					}
-					//auto indexGroupCount = pMesh->GetIndexGroupCount();
-					//for (decltype(indexGroupCount) i = 0; i < indexGroupCount; i++) {
-					//	const SceneObjectIndexArray& index_array = pMesh->GetIndexArray(i);
-					//	CreateIndexBuffer(index_array);
-					//}
 					if(draw_batch_context_.size() - pre_load_vex_arr_count > 0)
 					{
 						draw_batch_context_[n].object_matrix = Transpose(*pGeometryNode->GetCalculatedTransform());
+						draw_batch_context_[n].normal_matrix = MatrixInversetranspose(draw_batch_context_[n].object_matrix);
 						n += draw_batch_context_.size() - pre_load_vex_arr_count;
 					}
-
 				}
 				pGeometryNode = scene->GetNextGeometryNode();
 			}
@@ -166,30 +161,10 @@ namespace Engine
 
 			BuildViewMatrixLookAtLH(view, Vector3f{ 0.f, 0.0f, -1000.f }, Vector3f{ 0.0f, 0.0f, 1000.f }, Vector3f{ 0.0f, 1.0f, 0.0f });
 			BuildPerspectiveFovLHMatrix(projection, 1.57F, aspect, 100.f, 100000.f);
-
 			draw_frame_context_.view_matrix_ = Transpose(p_cam_mgr_->GetCamera().GetView());
 			draw_frame_context_.projection_matrix_ = Transpose(p_cam_mgr_->GetCamera().GetProjection());
 			draw_frame_context_.world_matrix_ = BuildIdentityMatrix();
-			memcpy(p_cbv_data_begin_, reinterpret_cast<void*>(&draw_frame_context_),sizeof(DrawFrameContext));
-			Matrix4x4f world{};
-			// calculate matrix to transform normal
-			DirectX::XMMATRIX xm{};		
-			for(int i = 0; i < 4; ++i)
-			{
-				for(int j = 0; j < 4;++j)
-					xm.r[i].m128_f32[j] = draw_batch_context_[0].object_matrix[i][j];
-			}
-			xm.r[3] = DirectX::XMVectorSet(0.f,0.f,0.f,1.f);
-			auto deter = DirectX::XMMatrixDeterminant(xm);
-			xm = DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(&deter, xm));
-			for (int i = 0; i < 4; ++i)
-			{
-				for (int j = 0; j < 4; ++j)
-					draw_batch_context_[0].normal_matrix[i][j] = xm.r[i].m128_f32[j];
-			}
-
-			draw_batch_context_[0].normal_matrix = draw_batch_context_[0].normal_matrix;
-			draw_batch_context_[0].color = 0.5f;
+			memcpy(p_cbv_data_begin_, reinterpret_cast<void*>(&draw_frame_context_),sizeof(DrawFrameContext));	
 		}
 		return hr;
 	}
@@ -555,6 +530,11 @@ namespace Engine
 	{
 		HRESULT hr = S_OK;
 		const uint32_t vertexBufferSize = vertex_array.GetDataSize();
+		if(vertexBufferSize == 0)
+		{
+			NE_LOG(ALL,kWarning,"some vertex_array has 0 data size")
+			return hr;
+		}
 		//create heap and resource desc
 		D3D12_HEAP_PROPERTIES heap_properties = {};
 		heap_properties.Type = D3D12_HEAP_TYPE_DEFAULT;
