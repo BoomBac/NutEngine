@@ -58,6 +58,18 @@
     <Filter Include="External\stb-image">
       <UniqueIdentifier>{076d17c2-31ea-499a-9d44-8ca6572ce487}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Inc\Framework\Geometries">
+      <UniqueIdentifier>{7c18f064-858f-4cc5-a769-eff1f8f32856}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Framework\Geometries">
+      <UniqueIdentifier>{da0b44b3-ea13-446e-9063-4f4630a1ad2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc\Physics">
+      <UniqueIdentifier>{fdfd29a8-3793-4c6f-89c8-e63b64dcfa81}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Physics">
+      <UniqueIdentifier>{7851ce02-4a08-4931-94c3-77ee511b70a8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -159,6 +171,33 @@
     <ClInclude Include="External\stb-image\stb_image.h">
       <Filter>External\stb-image</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\Framework\Geometries\Geometry.h">
+      <Filter>Inc\Framework\Geometries</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Geometries\Box.h">
+      <Filter>Inc\Framework\Geometries</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Geometries\Sphere.h">
+      <Filter>Inc\Framework\Geometries</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Geometries\Plane.h">
+      <Filter>Inc\Framework\Geometries</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Math\Aabb.h">
+      <Filter>Inc\Framework\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Interface\IPhysicsManager.h">
+      <Filter>Inc\Framework\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Physics\NutPhysicsManager.h">
+      <Filter>Inc\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Physics\RigidBody.h">
+      <Filter>Inc\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Physics\MotionState.h">
+      <Filter>Inc\Physics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -211,6 +250,21 @@
     </ClCompile>
     <ClCompile Include="Src\Framework\Common\TimerManager.cpp">
       <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Geometries\Geometry.cpp">
+      <Filter>Src\Framework\Geometries</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Geometries\Box.cpp">
+      <Filter>Src\Framework\Geometries</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Geometries\Plane.cpp">
+      <Filter>Src\Framework\Geometries</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Geometries\Sphere.cpp">
+      <Filter>Src\Framework\Geometries</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Physics\NutPhysicsManager.cpp">
+      <Filter>Src\Physics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

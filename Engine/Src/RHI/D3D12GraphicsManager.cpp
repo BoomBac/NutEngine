@@ -6,7 +6,6 @@
 #include "Framework/Common/SceneManager.h"
 #include "Framework/Common/Log.h"
 
-#include "WICTextureLoader.h"
 
 
 
@@ -88,6 +87,17 @@ namespace Engine
 	{
 
 	}
+#ifdef _DEBUG
+	void D3d12GraphicsManager::DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color)
+	{
+	}
+	void D3d12GraphicsManager::DrawBox(const Vector3f& bbMin, const Vector3f& bbMax, const Vector3f& color)
+	{
+	}
+	void D3d12GraphicsManager::ClearDebugBuffers()
+	{
+	}
+#endif
 	bool D3d12GraphicsManager::SetPerFrameShaderParameters()
 	{
 		//temp
@@ -99,9 +109,32 @@ namespace Engine
 	}
 	bool D3d12GraphicsManager::SetPerBatchShaderParameters(int32_t index)
 	{
+		PerBatchConstants pbc{};
+		memset(&pbc,0x00,sizeof(PerBatchConstants));
+		pbc.object_matrix = Transpose(*draw_batch_contexts_[index].node->GetCalculatedTransform());
+		pbc.normal_matrix = MatrixInversetranspose(pbc.object_matrix);
+		auto mat = draw_batch_contexts_[index].material;
+		if(mat)
+		{
+			Color color = mat->GetBaseColor();
+			if(color.value_map_)
+			{
+				pbc.base_color = Vector4f(0.f);
+				pbc.use_texture = 1.f;
+			}
+			else 
+			{
+				pbc.base_color = color.value_;
+				pbc.use_texture = 0.f;
+			}
+			color = mat->GetSpecularColor();
+			if (color.value_map_) pbc.specular_color = Vector4f(0.f);
+			else pbc.specular_color = color.value_;
+			Parameter param = mat->GetSpecularPower();
+			pbc.specular_power = param.value_;
+		}
 		uint32_t offset = cur_back_buf_index_ * kSizeConstantBufferPerFrame + kSizePerFrameConstantBuffer + index * kSizePerFrameConstantBuffer;
-		memcpy(p_cbv_data_begin_ + offset,
-			reinterpret_cast<void*>(&draw_batch_context_[index]), sizeof(DrawBatchConstants));
+		memcpy(p_cbv_data_begin_ + offset,&pbc, sizeof(PerBatchConstants));
 		return true;
 	}
 	HRESULT D3d12GraphicsManager::InitializeBuffers()
@@ -122,12 +155,14 @@ namespace Engine
 					ThrowIfFailed(hr = CreateTextureBuffer(*texture));
 			}
 		}
-		if (scene != nullptr) {
+		if (scene != nullptr) 
+		{
 			auto pGeometryNode = scene->GetFirstGeometryNode();
 			int32_t n = 0;
 			while (pGeometryNode)
 			{
-				if (pGeometryNode->Visible()) {
+				if (pGeometryNode->Visible()) 
+				{
 					auto pGeometry = scene->GetGeometry(pGeometryNode->GetSceneObjectRef());
 					assert(pGeometry);
 					auto pMesh = pGeometry->GetMesh().lock();
@@ -135,31 +170,26 @@ namespace Engine
 					// Set the number of vertex properties.
 					auto vertexPropertiesCount = pMesh->GetVertexPropertiesCount();
 					// Set the number of vertices in the vertex array.
-					auto vertexCount = pMesh->GetVertexCount();
-					Buffer buff;
-					int pre_load_vex_arr_count = draw_batch_context_.size();
-					for (decltype(vertexPropertiesCount) i = 0; i < vertexPropertiesCount; i++) {
+					size_t vertex_count = 0;
+					for (decltype(vertexPropertiesCount) i = 0; i < vertexPropertiesCount; i++) 
+					{
 						const SceneObjectVertexArray& v_property_array = pMesh->GetVertexPropertyArray(i);
+						if(v_property_array.GetType() == EVertexArrayType::kVertex)
+							vertex_count = v_property_array.GetVertexCount();
 						CreateVertexBuffer(v_property_array);
 					}
-					if(draw_batch_context_.size() - pre_load_vex_arr_count > 0)
+					if (vertex_count != 0)
 					{
-						draw_batch_context_[n].object_matrix = Transpose(*pGeometryNode->GetCalculatedTransform());
-						draw_batch_context_[n].normal_matrix = MatrixInversetranspose(draw_batch_context_[n].object_matrix);
+						DrawBatchContext dbc{};
+						dbc.count = vertex_count;
+						dbc.node = pGeometryNode;
+						//TODO:vertex has multi material slot
 						auto mat = scene->GetMaterial(pGeometryNode->GetMaterialRef(0));
-						if(mat != nullptr)
-						{
-							draw_batch_context_[n].base_color = mat->GetColor(SceneObjectMaterial::kDiffuse).value_;
-							draw_batch_context_[n].specular_color = mat->GetColor(SceneObjectMaterial::kSpecular).value_;
-							draw_batch_context_[n].specular_power = mat->GetParameter(SceneObjectMaterial::kSpecularFactor).value_;
-						}
-						else
-						{
-							draw_batch_context_[n].base_color = Vector4f(1.f);
-							draw_batch_context_[n].specular_color = Vector4f(1.f);
-							draw_batch_context_[n].specular_power = 8.f;
-						}
-						n += draw_batch_context_.size() - pre_load_vex_arr_count;
+						if(mat)	dbc.material = mat;
+						draw_batch_contexts_.push_back(std::move(dbc));
+						draw_batch_contexts_.back().vertex_buf_len_ = vertexPropertiesCount;
+						draw_batch_contexts_.back().vertex_buf_start_ = vertex_buf_view_.size() - vertexPropertiesCount;
+						++n;
 					}
 				}
 				pGeometryNode = scene->GetNextGeometryNode();
@@ -413,18 +443,25 @@ namespace Engine
 		p_cmdlist_->RSSetScissorRects(1, &rect_);
 		p_cmdlist_->SetGraphicsRootDescriptorTable(3,p_sampler_heap_->GetGPUDescriptorHandleForHeapStart());
 		p_cmdlist_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		for(uint32_t i = 0; i < draw_batch_context_.size(); i++) {
+		for(uint32_t i = 0; i < draw_batch_contexts_.size(); i++) 
+		{
 			SetPerBatchShaderParameters(i);
 			cbv_handle[1].ptr = cbv_handle[0].ptr + cbv_srv_uav_desc_size_ * (i + 1);
 			p_cmdlist_->SetGraphicsRootDescriptorTable(1, cbv_handle[1]);
-			p_cmdlist_->IASetVertexBuffers(0, 3, &vertex_buf_view_[i * vertex_buf_per_frame_num_]);
-			D3D12_GPU_DESCRIPTOR_HANDLE srvHandle;
-			srvHandle.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + 0) * cbv_srv_uav_desc_size_;
-			p_cmdlist_->SetGraphicsRootDescriptorTable(2,srvHandle);
-			// select which index buffer to use
-			//p_cmdlist_->IASetIndexBuffer(&index_buf_view_[i]);
-			// draw the vertex buffer to the back buffer
-			p_cmdlist_->DrawInstanced(draw_batch_context_[i].count,1,0,0);
+			p_cmdlist_->IASetVertexBuffers(0, draw_batch_contexts_[i].vertex_buf_len_, &vertex_buf_view_[draw_batch_contexts_[i].vertex_buf_start_]);
+			//p_cmdlist_->IASetVertexBuffers(0, 3, &vertex_buf_view_[i * vertex_buf_per_frame_num_]);
+			//bind texture
+			if(draw_batch_contexts_[i].material)
+			{
+				if(auto texture = draw_batch_contexts_[i].material->GetBaseColor().value_map_)
+				{
+					auto texture_index = texture_index_[texture->GetName()];
+					D3D12_GPU_DESCRIPTOR_HANDLE srvHandle;
+					srvHandle.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_index) * cbv_srv_uav_desc_size_;
+					p_cmdlist_->SetGraphicsRootDescriptorTable(2, srvHandle);
+				}
+			}
+			p_cmdlist_->DrawInstanced(draw_batch_contexts_[i].count,1,0,0);
 		}
 		auto res_barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_target_arr_[cur_back_buf_index_].Get(),D3D12_RESOURCE_STATE_RENDER_TARGET, 
 			D3D12_RESOURCE_STATE_PRESENT);
@@ -638,9 +675,6 @@ namespace Engine
 		index_buf_view_.push_back(indexBufferView);
 		buffers_.push_back(pIndexBufferGPU);
 		buffers_.push_back(pIndexBufferUpdate);
-		DrawBatchConstants dbc;
-		dbc.count = index_array.GetIndexCount();
-		draw_batch_context_.push_back(std::move(dbc));
 		return hr;
 	}
 	HRESULT D3d12GraphicsManager::CreateVertexBuffer(const SceneObjectVertexArray& vertex_array)
@@ -649,6 +683,11 @@ namespace Engine
 		const uint32_t vertexBufferSize = vertex_array.GetDataSize();
 		if(vertexBufferSize == 0)
 		{
+			D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+			vertexBufferView.BufferLocation = NULL;
+			vertexBufferView.StrideInBytes = 0;
+			vertexBufferView.SizeInBytes = 0;
+			vertex_buf_view_.emplace_back(std::move(vertexBufferView));
 			NE_LOG(ALL,kWarning,"some vertex_array has 0 data size")
 			return hr;
 		}
@@ -701,12 +740,6 @@ namespace Engine
 		vertex_buf_view_.emplace_back(std::move(vertexBufferView));
 		buffers_.emplace_back(std::move(pVertexBufferGPU));
 		buffers_.emplace_back(std::move(pVertexBufferUpdate));
-		if (vertex_array.GetType() == EVertexArrayType::kVertex)
-		{
-			DrawBatchConstants dbc{};
-			dbc.count = vertex_array.GetVertexCount();
-			draw_batch_context_.push_back(std::move(dbc));
-		}
 		return hr;
 	}
 };

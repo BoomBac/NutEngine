@@ -61,6 +61,23 @@ namespace Engine
         kUVs
     };
 
+    enum class ESceneObjectCollisionType
+    {
+        kSceneObjectCollisionTypeNone,
+        kSceneObjectCollisionTypeSphere,
+        kSceneObjectCollisionTypeBox,
+        kSceneObjectCollisionTypeCylinder,
+        kSceneObjectCollisionTypeCapsule,
+        kSceneObjectCollisionTypeCone,
+        kSceneObjectCollisionTypeMultiSphere,
+        kSceneObjectCollisionTypeConvexHull,
+        kSceneObjectCollisionTypeConvexMesh,
+        kSceneObjectCollisionTypeBvhMesh,
+        kSceneObjectCollisionTypeHeightfield,
+        kSceneObjectCollisionTypePlane
+    };
+
+
     class BaseSceneObject
     {
     protected:
@@ -222,6 +239,7 @@ namespace Engine
     public:
         SceneObjectTexture() : BaseSceneObject(ESceneObjectType::kSceneObjectTypeTexture), tex_coord_id_(0) {};
         SceneObjectTexture(std::string& name) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeTexture), tex_coord_id_(0), name_(name) {};
+        SceneObjectTexture(std::string& path ,std::string& name) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeTexture), tex_coord_id_(0), name_(name),path_(path) {};
         SceneObjectTexture(uint32_t coord_index, std::shared_ptr<Image>& image) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeTexture), tex_coord_id_(coord_index), p_image_(image) {};
         SceneObjectTexture(uint32_t coord_index, std::shared_ptr<Image>&& image) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeTexture), tex_coord_id_(coord_index), p_image_(std::move(image)) {};
         SceneObjectTexture(SceneObjectTexture&) = default;
@@ -247,6 +265,7 @@ namespace Engine
         std::string name_;
         std::shared_ptr<Image> p_image_;
         std::vector<Matrix4x4f> transforms_;
+        std::string path_;
     };
     template <typename T>
     struct ParameterValueMap
@@ -305,7 +324,7 @@ namespace Engine
         void SetParam(EMaterialProperty type, float param);
         Color GetColor(EMaterialProperty type) const;
         Parameter GetParameter(EMaterialProperty type) const;
-        void SetTexture(EMaterialProperty type, std::string textureName);
+        void SetTexture(EMaterialProperty type, std::string file_path);
         void SetTexture(EMaterialProperty type, std::shared_ptr<SceneObjectTexture>& texture);
         std::string GetTexture(EMaterialProperty type) const{}
 
@@ -327,21 +346,28 @@ namespace Engine
     class SceneObjectGeometry : public BaseSceneObject
     {
     public:
-        SceneObjectGeometry() : BaseSceneObject(ESceneObjectType::kSceneObjectTypeGeometry) {};
+        SceneObjectGeometry() : BaseSceneObject(ESceneObjectType::kSceneObjectTypeGeometry) ,collision_type_(ESceneObjectCollisionType::kSceneObjectCollisionTypeNone){};
         void SetVisibility(bool visible) { b_visible_ = visible; };
         const bool Visible() { return b_visible_; };
         void SetIfCastShadow(bool shadow) { b_shadow_ = shadow; };
         const bool CastShadow() { return b_shadow_; };
         void SetIfMotionBlur(bool motion_blur) { b_motion_blur_ = motion_blur; };
         const bool MotionBlur() { return b_motion_blur_; };
-        void AddMesh(std::shared_ptr<SceneObjectMesh>& mesh) 
-        {
-            mesh_.push_back(mesh);
-        };
+        void AddMesh(std::shared_ptr<SceneObjectMesh>& mesh) {mesh_.push_back(mesh);};
         const std::weak_ptr<SceneObjectMesh> GetMesh() { return (mesh_.empty() ? nullptr : mesh_[0]); };
         const std::weak_ptr<SceneObjectMesh> GetMeshLOD(size_t lod) { return (lod < mesh_.size() ? mesh_[lod] : nullptr); };
+        ESceneObjectCollisionType GetConllisionType() const { return collision_type_;};
+        const float* GetCollisionParam() const{return collision_param_;};
+        void SetCollisionParam(const float* param,INT32 count) 
+        {
+            assert(count > 0 && count < 10);
+            memcpy(collision_param_, param, sizeof(float) * count);
+        };
+        void SetCollisionType(ESceneObjectCollisionType collision_type) { collision_type_ = collision_type; };
     protected:
         std::vector<std::shared_ptr<SceneObjectMesh>> mesh_;
+        ESceneObjectCollisionType collision_type_;
+        float collision_param_[10];
         bool        b_visible_;
         bool        b_shadow_;
         bool        b_motion_blur_;

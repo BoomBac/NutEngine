@@ -59,7 +59,7 @@ int Engine::SceneManager::LoadScene()
     return -1;
 }
 
-const Engine::Scene* Engine::SceneManager::GetSceneForRendering()
+Engine::Scene* Engine::SceneManager::GetSceneForRendering()
 {
     return p_scene_.get();
 }

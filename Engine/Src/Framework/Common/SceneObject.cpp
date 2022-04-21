@@ -128,12 +128,20 @@ namespace Engine
 		NE_LOG(ALL, kWarning, "{} is missing,will return 0.f", kPropertyStrArr[type])
 		return 0.f;
 	}
-	void SceneObjectMaterial::SetTexture(EMaterialProperty type, std::string textureName)
+	void SceneObjectMaterial::SetTexture(EMaterialProperty type, std::string file_path)
 	{
-		if (type == EMaterialProperty::kDiffuse) base_color_ = std::make_shared<SceneObjectTexture>(textureName);
-		else if (type == EMaterialProperty::kSpecular) specular_ = std::make_shared<SceneObjectTexture>(textureName);
-		else if (type == EMaterialProperty::kSpecularFactor) specular_power_ = std::make_shared<SceneObjectTexture>(textureName);
-		else if (type == EMaterialProperty::kNormalMap) normal_map_ = std::make_shared<SceneObjectTexture>(textureName);
+		std::string name{};
+		for(int i = file_path.size() - 1; i >= 0; --i)
+		{
+			if(file_path[i]=='\\' || file_path[i] =='/')
+			{
+				name = file_path.substr(i + 1);break;
+			}
+		}
+		if (type == EMaterialProperty::kDiffuse) base_color_ = std::make_shared<SceneObjectTexture>(file_path, name);
+		else if (type == EMaterialProperty::kSpecular) specular_ = std::make_shared<SceneObjectTexture>(file_path, name);
+		else if (type == EMaterialProperty::kSpecularFactor) specular_power_ = std::make_shared<SceneObjectTexture>(file_path, name);
+		else if (type == EMaterialProperty::kNormalMap) normal_map_ = std::make_shared<SceneObjectTexture>(file_path, name);
 	}
 	void SceneObjectMaterial::SetTexture(EMaterialProperty type, std::shared_ptr<SceneObjectTexture>& texture)
 	{
@@ -168,7 +176,7 @@ namespace Engine
 			{
 				//jpeg handle all format temp
 				JpegParser parser;
-				p_image_ = std::make_shared<Image>(parser.Parse(name_.c_str()));
+				p_image_ = std::make_shared<Image>(parser.Parse(path_.c_str()));
 				width_ = p_image_->width;
 				height_ = p_image_->height;
 				pitch_ = p_image_->pitch;

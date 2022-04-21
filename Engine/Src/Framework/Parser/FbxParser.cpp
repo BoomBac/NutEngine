@@ -202,7 +202,8 @@ void Engine::FbxParser::GenerateMaterial(const fbxsdk::FbxSurfaceMaterial* mat, 
 	auto material = make_shared<SceneObjectMaterial>();
 	material->SetName(material_name);
 	const fbxsdk::FbxSurfacePhong* phong = FbxCast<fbxsdk::FbxSurfacePhong>(mat);
-	if (phong != nullptr) {
+	if (phong != nullptr) 
+	{
 		material->SetColor(SceneObjectMaterial::kSpecular, FbxToNutVector4f(phong->Specular));
 		material->SetColor(SceneObjectMaterial::kDiffuse, FbxToNutVector4f(phong->Diffuse));
 		material->SetParam(SceneObjectMaterial::kSpecularFactor,static_cast<float>(phong->SpecularFactor));
@@ -224,19 +225,19 @@ void Engine::FbxParser::GenerateMaterial(const fbxsdk::FbxSurfaceMaterial* mat, 
 						{
 							p_thread_pool_->Enqueue(&FbxParser::CopyTexture,this, std::string(file_texture->GetFileName()), 
 								std::string(kAssetTexturePath), file_name);
-							material->SetTexture(SceneObjectMaterial::kDiffuse, file_name);
+							material->SetTexture(SceneObjectMaterial::kDiffuse, std::string(kAssetTexturePath).append(file_name));
 						}						
 						else if(texture_type == "SpecularColor")
 						{
 							p_thread_pool_->Enqueue(&FbxParser::CopyTexture, this, std::string(file_texture->GetFileName()),
 								std::string(kAssetTexturePath), file_name);
-							material->SetTexture(SceneObjectMaterial::kSpecular, file_name);
+							material->SetTexture(SceneObjectMaterial::kSpecular, std::string(kAssetTexturePath).append(file_name));
 						}
 						else if(texture_type == "NormalMap")
 						{
 							p_thread_pool_->Enqueue(&FbxParser::CopyTexture, this, std::string(file_texture->GetFileName()),
 								std::string(kAssetTexturePath), file_name);
-							material->SetTexture(SceneObjectMaterial::kNormalMap, file_name);
+							material->SetTexture(SceneObjectMaterial::kNormalMap, std::string(kAssetTexturePath).append(file_name));
 						}
 					}
 				}

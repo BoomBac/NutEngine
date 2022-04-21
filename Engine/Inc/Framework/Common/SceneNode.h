@@ -73,11 +73,25 @@ namespace Engine
 			if(index < materials_.size()) return materials_[index];
 			else return std::string{};
 		}
+		void LinkRigidBody(void* rigidBody)
+		{
+			p_rigid_body_ = rigidBody;
+		}
+
+		void* UnlinkRigidBody()
+		{
+			void* rigidBody = p_rigid_body_;
+			p_rigid_body_ = nullptr;
+			return rigidBody;
+		}
+
+		void* RigidBody() { return p_rigid_body_; }
 	protected:
 		bool        b_visible_;
 		bool        b_shadow_;
 		bool        b_motion_blur_;
 		std::vector<std::string> materials_;
+		void*		p_rigid_body_ = nullptr;
 	};
 
 	class SceneLightNode : public SceneNode<SceneObjectLight>

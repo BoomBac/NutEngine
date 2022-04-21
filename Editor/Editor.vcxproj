@@ -66,8 +66,8 @@
       <AdditionalIncludeDirectories>H:\Project_VS2019\NutEngine\Engine\Inc;E:\DirectX-Headers\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>Engine.lib;DirectXTK12.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>H:\Project_VS2019\NutEngine\x64\Debug;X:\lib\DirectXTK12-main\Bin\Desktop_2022_Win10\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Engine.lib;BulletDynamics_vs2010_x64_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>H:\Project_VS2019\NutEngine\x64\Debug;H:\Project_VS2019\NutEngine\Engine\External\bullet3\bin;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">

@@ -32,7 +32,7 @@ cbuffer DrawBatchContext : register(b1)
 	float4 g_base_color_;
 	float4 g_specular_color_;
 	float g_gloss_;
-	int g_count_;
+	float g_use_texture_;
 };
 
 

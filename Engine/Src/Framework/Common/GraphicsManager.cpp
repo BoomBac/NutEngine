@@ -63,7 +63,7 @@ void Engine::GraphicsManager::CameraRotatePitch(float angle)
 {
     p_cam_mgr_->GetCamera().RotatePitch(AngleToRadius(angle));
 }
-#ifdef DEBUG
+#ifdef _DEBUG
 void Engine::GraphicsManager::DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color)
 {
 }

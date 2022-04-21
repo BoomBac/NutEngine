@@ -11,18 +11,20 @@ namespace Engine
 {
     class D3d12GraphicsManager : public GraphicsManager
     {
-        struct DrawBatchConstants
+        struct PerBatchConstants
         {
             Matrix4x4f object_matrix;
             Matrix4x4f normal_matrix;
             Vector4f base_color;
             Vector4f specular_color;
             float specular_power;
-            int32_t count;
+            float use_texture;
         };
         struct DrawBatchContext
         {
             INT32 count;
+            INT32 vertex_buf_start_;
+            INT32 vertex_buf_len_;
             std::shared_ptr<SceneGeometryNode> node;
             std::shared_ptr<SceneObjectMaterial> material;
         };
@@ -33,6 +35,11 @@ namespace Engine
         void Clear() override;
         void Draw() override;
         void Update();
+#ifdef _DEBUG
+        void DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color) override;
+        void DrawBox(const Vector3f& bbMin, const Vector3f& bbMax, const Vector3f& color) override;
+        void ClearDebugBuffers() override;
+#endif
     protected:
         bool SetPerFrameShaderParameters();
         bool SetPerBatchShaderParameters(int32_t index);
@@ -86,13 +93,14 @@ namespace Engine
         std::vector<ComPtr<ID3D12Resource>>    buffers_;                          // the pointer to the vertex buffer
         std::vector<D3D12_VERTEX_BUFFER_VIEW>       vertex_buf_view_;                 // a view of the vertex buffer
         std::vector<D3D12_INDEX_BUFFER_VIEW>        index_buf_view_;                  // a view of the index buffer
-        std::vector<DrawBatchConstants> draw_batch_context_;
+        std::vector<PerBatchConstants> draw_batch_constants_;
+        std::vector<DrawBatchContext> draw_batch_contexts_;
         std::vector<ComPtr<ID3D12Resource>> textures_;
         std::map<std::string,INT32> texture_index_;
         
         uint8_t* p_cbv_data_begin_ = nullptr;
         // CB size is required to be 256-byte aligned.
-        static constexpr size_t				kSizePerBatchConstantBuffer = (sizeof(DrawBatchConstants) + 255) & 256;
+        static constexpr size_t				kSizePerBatchConstantBuffer = (sizeof(PerBatchConstants) + 255) & 256;
         static constexpr size_t				kSizePerFrameConstantBuffer = (sizeof(DrawFrameContext) + 255) & 256; // CB size is required to be 256-byte aligned.
         static constexpr size_t				kSizeConstantBufferPerFrame = kSizePerFrameConstantBuffer + kSizePerBatchConstantBuffer * kMaxSceneObjectCount;
         // Synchronization objects

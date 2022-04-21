@@ -122,12 +122,13 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>H:\Project_VS2019\NutEngine\Engine\Inc;E:\DirectX-Headers\include;H:\Project_VS2019\NutEngine\Engine\External\FBXSDK\2020.3.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>libfbxsdk.lib;Engine.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>H:\Project_VS2019\NutEngine\x64\Debug;H:\Project_VS2019\NutEngine\Engine\External\FBXSDK\2020.3.1\lib\vs2019\x64\debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Engine.lib;BulletCollision_vs2010_x64_debug.lib;BulletDynamics_vs2010_x64_debug.lib;LinearMath_vs2010_x64_debug.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>H:\Project_VS2019\NutEngine\x64\Debug;H:\Project_VS2019\NutEngine\Engine\External\FBXSDK\2020.3.1\lib\vs2019\x64\debug;H:\Project_VS2019\NutEngine\Engine\External\bullet3\bin;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

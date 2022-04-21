@@ -22,7 +22,7 @@ namespace Engine
 		void MoveCameraRight(float distance);
 		void CameraRotateYaw(float angle);
 		void CameraRotatePitch(float angle);
-#ifdef DEBUG
+#ifdef _DEBUG
 		virtual void DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color);
 		virtual void DrawBox(const Vector3f& bbMin, const Vector3f& bbMax, const Vector3f& color);
 		virtual void ClearDebugBuffers();

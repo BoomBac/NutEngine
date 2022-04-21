@@ -23,19 +23,19 @@ void Engine::InputManager::ButtonDown(EKeyButton btn)
 {
 	if(btn == EKeyButton::kD)
 	{
-		g_pGraphicsManager->MoveCameraRight(100.f);
+		g_pGraphicsManager->MoveCameraRight(200.f);
 	}
 	else if (btn == EKeyButton::kA)
 	{
-		g_pGraphicsManager->MoveCameraRight(-100.f);
+		g_pGraphicsManager->MoveCameraRight(-200.f);
 	}
 	else if(btn == EKeyButton::kW)
 	{
-		g_pGraphicsManager->MoveCameraForward(100.f);
+		g_pGraphicsManager->MoveCameraForward(200.f);
 	}
 	else if (btn == EKeyButton::kS)
 	{
-		g_pGraphicsManager->MoveCameraForward(-100.f);
+		g_pGraphicsManager->MoveCameraForward(-200.f);
 	}
 }
 

@@ -180,6 +180,16 @@ namespace Engine
 		}
 		return res;
 	}
+	template<template<typename> typename TT, typename T>
+	TT<T> operator+(const T& scalar, const TT<T>& v)
+	{
+		TT<T> res{};
+		for (uint32_t i = 0; i < CountOf(v.data); i++)
+		{
+			res.data[i] = v.data[i] + scalar;
+		}
+		return res;
+	}
 	/// <summary>
 	/// Any number of vector additions, with at least two parameters passed in
 	/// </summary>
@@ -372,6 +382,14 @@ namespace Engine
 			}
 		}
 		Transpose(ret);
+	}
+
+	template <template <typename, int, int> class M, template <typename> class V, typename T, int ROWS, int COLS>
+	inline void GetOrigin(V<T>& result, const M<T, ROWS, COLS>& matrix)
+	{
+		static_assert(ROWS >= 3, "[Error] Only 3x3 and above matrix can be passed to this method!");
+		static_assert(COLS >= 3, "[Error] Only 3x3 and above matrix can be passed to this method!");
+		result = { matrix[3][0], matrix[3][1], matrix[3][2] };
 	}
 
 	template <typename T, int row, int col>
