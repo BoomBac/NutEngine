@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "../../pch.h"
-#include <DirectXMath.h>
+#include <array>
 #include "Framework/Common/GraphicsManager.h"
 #include "Framework/Common/SceneObject.h"
 
@@ -28,24 +28,38 @@ namespace Engine
             std::shared_ptr<SceneGeometryNode> node;
             std::shared_ptr<SceneObjectMaterial> material;
         };
+        struct DrawDebugBatchContext
+        {
+            INT32 count;
+            INT32 vertex_buf_start_;
+            INT32 vertex_buf_len_;
+            INT32 vertex_buf_id_;
+        };
     public:
         int Initialize() override;
         void Finalize() override;
-        void Tick() override;
         void Clear() override;
         void Draw() override;
-        void Update();
 #ifdef _DEBUG
         void DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color) override;
         void DrawBox(const Vector3f& bbMin, const Vector3f& bbMax, const Vector3f& color) override;
+    private:
         void ClearDebugBuffers() override;
+        void ClearVertexData();
+        void InitializeBufferDebug();
+        void InitializeShaderDebug();
 #endif
     protected:
         bool SetPerFrameShaderParameters();
         bool SetPerBatchShaderParameters(int32_t index);
-        HRESULT InitializeBuffers();
-        HRESULT InitializeShader(const char* vs_filename, const char* fs_filename);
-        HRESULT RenderBuffers();
+
+        void UpdateConstants() override;
+        void InitializeBuffers(const Scene& scene) override;
+        void ClearBuffers() override;
+        bool InitializeShaders() override;
+        void ClearShaders() override;
+        void RenderBuffers() override;
+
     private:
         HRESULT CreateDescriptorHeaps();
         HRESULT CreateRenderTarget();
@@ -55,7 +69,7 @@ namespace Engine
         HRESULT CreateTextureBuffer(SceneObjectTexture& texture);
         HRESULT CreateConstantBuffer();
         HRESULT CreateIndexBuffer(const SceneObjectIndexArray& index_array);
-        HRESULT CreateVertexBuffer(const SceneObjectVertexArray& vertex_array);
+        HRESULT CreateVertexBuffer(const SceneObjectVertexArray& vertex_array, bool b_debug = false);
         HRESULT CreateRootSignature();
         HRESULT WaitForPreviousFrame();
         HRESULT PopulateCommandList();
@@ -97,7 +111,16 @@ namespace Engine
         std::vector<DrawBatchContext> draw_batch_contexts_;
         std::vector<ComPtr<ID3D12Resource>> textures_;
         std::map<std::string,INT32> texture_index_;
-        
+#ifdef _DEBUG
+        UINT8* p_vex_data_begin = nullptr;
+        std::vector<DrawDebugBatchContext> draw_batch_contexts_debug_;
+        ComPtr<ID3D12PipelineState> p_plstate_debug_ = nullptr;
+        ComPtr<ID3D12Resource>    buffers_debug_;
+        std::vector<D3D12_VERTEX_BUFFER_VIEW>       vertex_buf_view_debug_;
+        Vector3f* vertex_data_debug_ = nullptr;
+        Vector3f* color_data_debug_ = nullptr;
+        int cur_debug_vertex_pos = 0;
+#endif
         uint8_t* p_cbv_data_begin_ = nullptr;
         // CB size is required to be 256-byte aligned.
         static constexpr size_t				kSizePerBatchConstantBuffer = (sizeof(PerBatchConstants) + 255) & 256;

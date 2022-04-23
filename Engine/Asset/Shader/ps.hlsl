@@ -11,5 +11,5 @@ float4 main(PSInput input) : SV_TARGET
 	float3 view_dir = normalize(input.positionW - g_camera_position_.xyz);
 	float3 specular = pow(max(0.f, dot(reflect_dir, view_dir)), max(16.f, g_gloss_)) * g_specular_color_.xyz;
 	float3 color = diffuse + specular + ambient;
-	return float4( + color,1.f);
+	return float4(normal_dir, 1.f);
 }

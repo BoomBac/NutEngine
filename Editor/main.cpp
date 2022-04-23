@@ -8,6 +8,7 @@
 #include "Framework/Common/Log.h"
 #include "Framework/Common/Global.h"
 #include "Framework/Common/TimerManager.h"
+#include "Physics/NutPhysicsManager.h"
 
 namespace Engine
 {
@@ -20,6 +21,7 @@ namespace Engine
     InputManager* g_InputManager = new InputManager();
     LogManager* g_pLogManager = new LogManager();
     TimerManager* g_pTimerManager = new TimerManager();
+    IPhysicsManager* g_pPhysicsManager = new NutPhysicsManager();
 }
 using namespace Engine;
 using Engine::g_pApp;
@@ -38,6 +40,7 @@ int main(int argc, char *argv[])
     int error = 0;
     error += g_pLogManager->Initialize();
     error += g_pApp->Initialize();
+    error += g_pPhysicsManager->Initialize();
     error += g_pTimerManager->Initialize();
     error += g_pMemoryManager->Initialize();
     error += g_pAssetLoader->Initialize();
@@ -55,8 +58,8 @@ int main(int argc, char *argv[])
     {
         g_pApp->Tick();
         g_pTimerManager->Tick();
-        g_pGraphicsManager->Clear();
-        g_pGraphicsManager->Draw();
+        g_pPhysicsManager->Tick();
+        g_pGraphicsManager->Tick();
     }
     g_pApp->Finalize();
     g_pGraphicsManager->Finalize();
@@ -64,5 +67,6 @@ int main(int argc, char *argv[])
     g_pMemoryManager->Finalize();
     g_pAssetLoader->Finalize();
     g_pLogManager->Finalize();
+    g_pPhysicsManager->Finalize();
     return 0;
 }

@@ -3,6 +3,7 @@
 #include "Framework/Parser/FbxParser.h"
 #include "Framework/Common/TimerManager.h"
 #include "Framework/Common/Log.h"
+#include "Physics/NutPhysicsManager.h"
 
 using namespace Engine;
 
@@ -117,6 +118,11 @@ bool Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, 
 		geometry->SetVisibility(_node->Visible());
 		geometry->SetIfCastShadow(_node->CastShadow());
 		geometry->SetIfMotionBlur(true);
+		geometry->SetCollisionType(ESceneObjectCollisionType::kSceneObjectCollisionTypeSphere);
+		//temp
+		float radius = 1.0f;
+		geometry->SetCollisionParam(&radius,1);
+		g_pPhysicsManager->CreateRigidBody(*_node.get(),*geometry.get());
 		if(GenerateMesh(geometry, _mesh, scene))
 		{
 			scene.GeometryNodes.emplace(object->GetName(), _node);

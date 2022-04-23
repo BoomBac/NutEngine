@@ -3,6 +3,7 @@
 #include "Framework/Common/Image.h"
 #include "Framework/Common/GfxConfiguration.h"
 #include "Framework/Interface/IApplication.h"
+#include "Framework/Common/Log.h"
 
 
 using namespace Engine;
@@ -12,21 +13,29 @@ int Engine::GraphicsManager::Initialize()
 {
     int result = 0;
     InitConstants();
+    p_cam_mgr_ = std::make_unique<CameraManager>();
     return result;
 }
 
 void Engine::GraphicsManager::Finalize()
 {
+#ifdef _DEBUG
+    ClearDebugBuffers();
+#endif // _DEBUG
+    ClearBuffers();
+    ClearShaders();
 }
 
 void Engine::GraphicsManager::Tick()
 {
     if (g_pSceneManager->IsSceneChanged())
     {
-        //TODO:Lgger
-        //cout << "[GraphicsManager] Detected Scene Change, reinitialize buffers ..." << endl;
-        Finalize();
-        Initialize();
+        NE_LOG(ALL,kWarning,"[GraphicsManager] Detected Scene Change, reinitialize buffers ...")
+        ClearBuffers();
+        ClearShaders();
+        auto& scene = g_pSceneManager->GetSceneForRendering();
+        InitializeShaders();
+        InitializeBuffers(scene);
         g_pSceneManager->NotifySceneIsRenderingQueued();
     }
     Clear();
@@ -35,11 +44,16 @@ void Engine::GraphicsManager::Tick()
 
 void Engine::GraphicsManager::Clear()
 {
+
 }
 
 void Engine::GraphicsManager::Draw()
 {
-
+    UpdateConstants();
+    RenderBuffers();
+#ifdef _DEBUG
+    RenderDebugBuffers();
+#endif //_DEBUG
 }
 void Engine::GraphicsManager::WorldRotateY(float radius)
 {
@@ -74,100 +88,69 @@ void Engine::GraphicsManager::DrawBox(const Vector3f& bbMin, const Vector3f& bbM
 
 void Engine::GraphicsManager::ClearDebugBuffers()
 {
+    NE_LOG(ALL, kNormal, "[GraphicsManager] GraphicsManager::ClearDebugBuffers()")
 }
-
 #endif
 
-bool Engine::GraphicsManager::SetPerFrameShaderParameters()
+
+bool Engine::GraphicsManager::InitializeShaders()
 {
-    return false;
-}
-bool Engine::GraphicsManager::SetPerBatchShaderParameters(const char* paramName, const Matrix4x4f& param)
-{
-    return false;
-}
-bool Engine::GraphicsManager::SetPerBatchShaderParameters(const char* paramName, const Vector3f& param)
-{
-    return false;
-}
-bool Engine::GraphicsManager::SetPerBatchShaderParameters(const char* paramName, const float param)
-{
-    return false;
-}
-bool Engine::GraphicsManager::SetPerBatchShaderParameters(const char* paramName, const int param)
-{
-    return false;
+    NE_LOG(ALL, kNormal, "[GraphicsManager] GraphicsManager::InitializeShaders()")
+    return true;
 }
 
-bool Engine::GraphicsManager::InitializeShaders(const char* vsFilename, const char* fsFilename)
+void Engine::GraphicsManager::ClearShaders()
 {
-    return false;
+    NE_LOG(ALL, kNormal, "[GraphicsManager] GraphicsManager::ClearShaders()")
 }
 
-void Engine::GraphicsManager::InitializeBuffers()
+void Engine::GraphicsManager::InitializeBuffers(const Scene& scene)
 {
+    NE_LOG(ALL, kNormal, "[GraphicsManager] GraphicsManager::InitializeBuffers()")
+}
+
+void Engine::GraphicsManager::ClearBuffers()
+{
+    NE_LOG(ALL, kNormal, "[GraphicsManager] GraphicsManager::ClearBuffers()")
 }
 
 
 void Engine::GraphicsManager::InitConstants()
 {
     BuildIdentityMatrix(draw_frame_context_.world_matrix_);
-    CalculateCameraMatrix();
 }
 
 void Engine::GraphicsManager::CalculateCameraMatrix()
 {
-    auto* scene = g_pSceneManager->GetSceneForRendering();
-    if(scene == nullptr) return;
-    auto pCameraNode = scene->GetFirstCameraNode();
-    if (pCameraNode) {
-        draw_frame_context_.view_matrix_ = *pCameraNode->GetCalculatedTransform();
-        //InverseMatrix4X4f(m_DrawFrameContext.m_viewMatrix);
-    }
-    else {
-        // use default build-in camera
-        Vector3f position = { 0, -5, 0 }, lookAt = { 0, 0, 0 }, up = { 0, 0, 1 };
-        BuildViewMatrixLookAtLH(draw_frame_context_.view_matrix_, position, lookAt, up);
-    }
-    float fieldOfView = kPi / 2.0f;
-    float nearClipDistance = 1.0f;
-    float farClipDistance = 100.0f;
-    //if (pCameraNode) {
-    //    auto pCamera = scene.GetCamera(pCameraNode->GetSceneObjectRef());
-    //    // Set the field of view and screen aspect ratio.
-    //    fieldOfView = dynamic_pointer_cast<SceneObjectPerspectiveCamera>(pCamera)->GetFov();
-    //    nearClipDistance = pCamera->GetNearClipDistance();
-    //    farClipDistance = pCamera->GetFarClipDistance();
-    //}
-
     const GfxConfiguration& conf = g_pApp->GetConfiguration();
-
-    float screenAspect = static_cast<float>(conf.viewport_width_) / static_cast<float>(conf.viewport_height_);
-    // Build the perspective projection matrix.
-    BuildPerspectiveFovLHMatrix(draw_frame_context_.projection_matrix_, fieldOfView, screenAspect, nearClipDistance, farClipDistance);
+    auto aspect = static_cast<float>(conf.viewport_width_) / static_cast<float>(conf.viewport_height_);
+    //lenth is cm			
+    draw_frame_context_.camera_position_ = Vector4f(p_cam_mgr_->GetCamera().GetPosition(),1.f);
+    draw_frame_context_.view_matrix_ = Transpose(p_cam_mgr_->GetCamera().GetView());
+    draw_frame_context_.projection_matrix_ = Transpose(p_cam_mgr_->GetCamera().GetProjection());
+    draw_frame_context_.world_matrix_ = BuildIdentityMatrix();
+    draw_frame_context_.ambient_color_ = Vector4f{ 0.1f,0.1f,0.1f,0.f };
+    draw_frame_context_.light_color_ = Vector4f{ 1.f,1.f,1.f,1.f };
 }
 
 void Engine::GraphicsManager::CalculateLights()
 {
-    auto* scene = g_pSceneManager->GetSceneForRendering();
-    auto pLightNode = scene->GetFirstLightNode();
-    if (pLightNode) {
-        //draw_frame_context_.light_position_ = { 0.0f, 0.0f, 0.0f };
-        //TransformCoord(draw_frame_context_.light_position_, *pLightNode->GetCalculatedTransform());
 
-        //auto pLight = scene->GetLight(pLightNode->GetSceneObjectRef());
-        //if (pLight) {
-        //   // draw_frame_context_.light_color_ = pLight->GetColor().value_.xyz;
-        //}
-    }
-    else {
-        // use default build-in light 
-        //draw_frame_context_.light_position_ = { -1.0f, -5.0f, 0.0f };
-        //draw_frame_context_.light_color_ = { 1.0f, 1.0f, 1.0f};
-    }
 }
 
 
 void Engine::GraphicsManager::RenderBuffers()
 {
+    //NE_LOG(ALL, kNormal, "[GraphicsManager] GraphicsManager::RenderBuffers()")
+}
+
+void Engine::GraphicsManager::UpdateConstants()
+{
+    CalculateCameraMatrix();
+    CalculateLights();
+}
+
+void Engine::GraphicsManager::RenderDebugBuffers()
+{
+    //NE_LOG(ALL, kNormal, "[GraphicsManager] GraphicsManager::RenderDebugBuffers()")
 }

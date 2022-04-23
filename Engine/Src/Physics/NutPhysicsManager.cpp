@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Physics/NutPhysicsManager.h"
+#include "Framework/Common/GraphicsManager.h"
 #include "Physics/RigidBody.h"
 #include "Framework/Geometries/Box.h"
 #include "Framework/Geometries/Sphere.h"
@@ -23,8 +24,10 @@ namespace Engine
 		{
 			ClearRigidBodies();
 			CreateRigidBodies();
-			g_pSceneManager->NotifySceneIsRenderingQueued();
+			//g_pSceneManager->NotifySceneIsRenderingQueued();
 		}
+		//temp
+		DrawDebugInfo();
 	}
 
 	void NutPhysicsManager::CreateRigidBody(SceneGeometryNode& node, const SceneObjectGeometry& geometry)
@@ -89,7 +92,7 @@ namespace Engine
 
 	int NutPhysicsManager::CreateRigidBodies()
 	{
-		auto& scene = *g_pSceneManager->GetSceneForRendering();
+		auto& scene = g_pSceneManager->GetSceneForRendering();
 		// Geometries
 		for (auto _it : scene.GeometryNodes)
 		{
@@ -104,7 +107,7 @@ namespace Engine
 
 	void NutPhysicsManager::ClearRigidBodies()
 	{
-		auto& scene = *g_pSceneManager->GetSceneForRendering();
+		auto& scene = g_pSceneManager->GetSceneForRendering();
 		// Geometries
 		for (auto _it : scene.GeometryNodes)
 		{
@@ -133,5 +136,27 @@ namespace Engine
 	void NutPhysicsManager::ApplyCentralForce(void* rigidBody, Vector3f force)
 	{
 	}
-
+#ifdef _DEBUG
+	void NutPhysicsManager::DrawDebugInfo()
+	{
+		auto& scene = g_pSceneManager->GetSceneForPhysicalSimulation();
+		for(auto it : scene.GeometryNodes)
+		{
+			auto geo_node = it.second;
+			if(void * rigid_body = geo_node->RigidBody())
+			{
+				RigidBody* _rigid_body = reinterpret_cast<RigidBody*>(rigid_body);
+				Matrix4x4f sim_res = GetRigidBodyTransform(_rigid_body);
+				auto geo = _rigid_body->GetCollisionShape();
+				DrawAabb(*geo, sim_res);
+			}
+		}
+	}
+	void NutPhysicsManager::DrawAabb(const Geometry& geometry, const Matrix4x4f& trans)
+	{
+		Vector3f bbmin,bbmax,color{1.f,1.f,1.f};
+		geometry.GetAabb(trans,bbmin,bbmax);
+		g_pGraphicsManager->DrawBox(bbmin,bbmax,color);
+	}
+#endif
 }

@@ -274,6 +274,12 @@
     <FxCompile Include="Asset\Shader\ps.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
+    <FxCompile Include="Asset\Shader\vs_debug.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\ps_debug.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Asset\Shader\type.hlsli">

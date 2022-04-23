@@ -7,7 +7,7 @@ namespace Engine
 	{
 		Vector3f center;
 		GetOrigin(center, trans);
-		Vector3f extent(margin_, margin_, margin_);
+		Vector3f extent(radius_ * trans[0][0], radius_ * trans[0][0], radius_  * trans[0][0]);
 		aabbMin = center - extent;
 		aabbMax = center + extent;
 	}

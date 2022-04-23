@@ -28,18 +28,19 @@ namespace Engine
 		virtual void ClearDebugBuffers();
 #endif
 	protected:
-		bool SetPerFrameShaderParameters();
-		bool SetPerBatchShaderParameters(const char* paramName, const Matrix4x4f& param);
-		bool SetPerBatchShaderParameters(const char* paramName, const Vector3f& param);
-		bool SetPerBatchShaderParameters(const char* paramName, const float param);
-		bool SetPerBatchShaderParameters(const char* paramName, const int param);
+		virtual bool InitializeShaders();
+		virtual void ClearShaders();
+		virtual void InitializeBuffers(const Scene& scene);
+		virtual void ClearBuffers();
 
-		bool InitializeShaders(const char* vsFilename, const char* fsFilename);
-		void InitializeBuffers();
-		void InitConstants();
-		void CalculateCameraMatrix();
-		void CalculateLights();
-		void RenderBuffers();
+		virtual void InitConstants();
+		virtual void CalculateCameraMatrix();
+		virtual void CalculateLights();
+		virtual void RenderBuffers();
+		virtual void UpdateConstants();
+#ifdef _DEBUG
+		virtual void RenderDebugBuffers();
+#endif
 	protected:
 		struct DrawFrameContext {
 			Matrix4x4f  world_matrix_;

@@ -49,61 +49,209 @@ namespace Engine
 			const GfxConfiguration& config = g_pApp->GetConfiguration();
 			vp_ = { 0.0f, 0.0f, static_cast<float>(config.viewport_width_), static_cast<float>(config.viewport_height_), 0.0F, 1.0F };
 			rect_ = { 0, 0, static_cast<LONG>(config.viewport_width_), static_cast<LONG>(config.viewport_height_) };
+			vertex_data_debug_ = new Vector3f[2048];
+			color_data_debug_ = new Vector3f[2048];
 			result = static_cast<int>(CreateGraphicsResources());
+#ifdef _DEBUG
+			InitializeBufferDebug();
+#endif
 		}
 		return result;
 	}
 	void D3d12GraphicsManager::Finalize()
 	{
 		WaitForPreviousFrame();
-	}
-	void D3d12GraphicsManager::Tick()
-	{
+		GraphicsManager::Finalize();
+		delete[] color_data_debug_;
+		delete[] vertex_data_debug_;
 	}
 	void D3d12GraphicsManager::Clear()
 	{
-		HRESULT hr;
-		if (FAILED(hr = p_cmdalloc_->Reset())) return;
-		if (FAILED(hr = p_cmdlist_->Reset(p_cmdalloc_.Get(), p_plstate_.Get()))) return;
-		// Indicate that the back buffer will be used as a render target.
-		auto barrier_back_buffer = CD3DX12_RESOURCE_BARRIER::Transition(render_target_arr_[cur_back_buf_index_].Get(),
-			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		p_cmdlist_->ResourceBarrier(1, &barrier_back_buffer);
-		//TODO:Using the depth stencil buffer
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(p_rtv_heap_->GetCPUDescriptorHandleForHeapStart(), cur_back_buf_index_, rtv_desc_size_);
-		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(p_dsv_heap_->GetCPUDescriptorHandleForHeapStart());
-		p_cmdlist_->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
-		// clear the back buffer to a deep blue
-		p_cmdlist_->ClearRenderTargetView(rtvHandle, kBackColor, 0, nullptr);
-		p_cmdlist_->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+		GraphicsManager::Clear();
 	}
 	void D3d12GraphicsManager::Draw()
 	{
 		PopulateCommandList();
-		RenderBuffers();
-		WaitForPreviousFrame();
-	}
-	void D3d12GraphicsManager::Update()
-	{
+		//clear debug vertex data
 
+		GraphicsManager::Draw();
+		WaitForPreviousFrame();
+		ClearVertexData();
 	}
 #ifdef _DEBUG
 	void D3d12GraphicsManager::DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color)
 	{
+		vertex_data_debug_[cur_debug_vertex_pos] = from;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		vertex_data_debug_[cur_debug_vertex_pos] = to;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		memcpy(p_vex_data_begin, vertex_data_debug_, cur_debug_vertex_pos * 12);
+		draw_batch_contexts_debug_[0].count += 2;
 	}
 	void D3d12GraphicsManager::DrawBox(const Vector3f& bbMin, const Vector3f& bbMax, const Vector3f& color)
 	{
+		static bool init = false;
+		if(!init)
+		{
+			DrawDebugBatchContext dbc{};
+			dbc.count = 0;
+			draw_batch_contexts_debug_.push_back(std::move(dbc));
+			init = true;
+		}
+		const auto pre_offset = cur_debug_vertex_pos;
+		//bottom
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMin;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMin;
+		vertex_data_debug_[cur_debug_vertex_pos].z = bbMax.z;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMin;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMin;
+		vertex_data_debug_[cur_debug_vertex_pos].x = bbMax.x;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMin;
+		vertex_data_debug_[cur_debug_vertex_pos].x = bbMax.x;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMax;
+		vertex_data_debug_[cur_debug_vertex_pos].y = bbMin.y;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMax;
+		vertex_data_debug_[cur_debug_vertex_pos].y = bbMin.y;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMin;
+		vertex_data_debug_[cur_debug_vertex_pos].z = bbMax.z;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		//top
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMax;
+		vertex_data_debug_[cur_debug_vertex_pos].x = bbMin.x;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMin;
+		vertex_data_debug_[cur_debug_vertex_pos].y = bbMax.y;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMin;
+		vertex_data_debug_[cur_debug_vertex_pos].y = bbMax.y;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMax;
+		vertex_data_debug_[cur_debug_vertex_pos].z = bbMin.z;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMax;
+		vertex_data_debug_[cur_debug_vertex_pos].z = bbMin.z;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMax;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMax;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMax;
+		vertex_data_debug_[cur_debug_vertex_pos].x = bbMin.x;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		//side
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMin;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMin;
+		vertex_data_debug_[cur_debug_vertex_pos].y = bbMax.y;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMin;
+		vertex_data_debug_[cur_debug_vertex_pos].x = bbMax.x;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMin;
+		vertex_data_debug_[cur_debug_vertex_pos].xy = bbMax.xy;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMax;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMax;
+		vertex_data_debug_[cur_debug_vertex_pos].y = bbMin.y;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMin;
+		vertex_data_debug_[cur_debug_vertex_pos].z = bbMax.z;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		vertex_data_debug_[cur_debug_vertex_pos] = bbMax;
+		vertex_data_debug_[cur_debug_vertex_pos].x = bbMin.x;
+		color_data_debug_[cur_debug_vertex_pos++] = color;
+		memcpy(p_vex_data_begin + pre_offset * 12, &vertex_data_debug_[pre_offset], 288);
+		draw_batch_contexts_debug_[0].count += 24;
 	}
 	void D3d12GraphicsManager::ClearDebugBuffers()
 	{
+		vertex_buf_view_debug_.clear();
+		draw_batch_contexts_debug_.clear();
+		buffers_debug_.Reset();
+		cur_debug_vertex_pos = 0;
+	}
+	void D3d12GraphicsManager::ClearVertexData()
+	{
+		if(draw_batch_contexts_debug_.size() > 0)
+		{
+			memset(p_vex_data_begin, 0x00, 2048);
+			draw_batch_contexts_debug_[0].count = 0;
+			cur_debug_vertex_pos = 0;
+		}
+	}
+	void D3d12GraphicsManager::InitializeBufferDebug()
+	{
+		D3D12_HEAP_PROPERTIES prop = { D3D12_HEAP_TYPE_UPLOAD,D3D12_CPU_PAGE_PROPERTY_UNKNOWN,D3D12_MEMORY_POOL_UNKNOWN,1,1 };
+		const size_t cb_size = sizeof(Vector3f) * 2048;
+		auto buf_desc = CD3DX12_RESOURCE_DESC::Buffer(cb_size);
+		p_device_->CreateCommittedResource(&prop, D3D12_HEAP_FLAG_NONE, &buf_desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,IID_PPV_ARGS(&buffers_debug_));
+		D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+		vertexBufferView.BufferLocation = buffers_debug_->GetGPUVirtualAddress();
+		vertexBufferView.StrideInBytes = 12;
+		vertexBufferView.SizeInBytes = cb_size;
+		vertex_buf_view_debug_.emplace_back(std::move(vertexBufferView));
+		D3D12_RANGE readRange = { 0, 0 };
+		buffers_debug_->Map(0, &readRange, reinterpret_cast<void**>(&p_vex_data_begin));
+	}
+	void D3d12GraphicsManager::InitializeShaderDebug()
+	{
+		const char* vs_filename = "Shader/vs_debug.cso";
+		const char* fs_filename = "Shader/ps_debug.cso";
+		Buffer vertexShader = g_pAssetLoader->OpenAndReadBinarySync(vs_filename);
+		Buffer pixelShader = g_pAssetLoader->OpenAndReadBinarySync(fs_filename);
+		D3D12_SHADER_BYTECODE vertexShaderByteCode;
+		vertexShaderByteCode.pShaderBytecode = vertexShader.GetData();
+		vertexShaderByteCode.BytecodeLength = vertexShader.GetDataSize();
+		D3D12_SHADER_BYTECODE pixelShaderByteCode;
+		pixelShaderByteCode.pShaderBytecode = pixelShader.GetData();
+		pixelShaderByteCode.BytecodeLength = pixelShader.GetDataSize();
+		// create the input layout object
+		D3D12_INPUT_ELEMENT_DESC ied[] =
+		{
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			//{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		};
+		//Create DepthSenticil Desc
+		const D3D12_DEPTH_STENCILOP_DESC defaultStencilOp = { D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_COMPARISON_FUNC_ALWAYS };
+		D3D12_DEPTH_STENCIL_DESC dsd = { TRUE,D3D12_DEPTH_WRITE_MASK_ALL,D3D12_COMPARISON_FUNC_LESS,FALSE,D3D12_DEFAULT_STENCIL_READ_MASK,
+			D3D12_DEFAULT_STENCIL_WRITE_MASK,defaultStencilOp, defaultStencilOp };
+		//Describe and create the graphics pipeline state object (PSO).
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+		psoDesc.InputLayout = { ied, _countof(ied) };
+		psoDesc.pRootSignature = p_rootsig_.Get();
+		psoDesc.VS = vertexShaderByteCode;
+		psoDesc.PS = pixelShaderByteCode;
+		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+		psoDesc.DepthStencilState = dsd;
+		psoDesc.SampleMask = UINT_MAX;
+		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+		psoDesc.NumRenderTargets = 1;
+		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		psoDesc.SampleDesc.Count = 1;
+		p_device_->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&p_plstate_debug_));
 	}
 #endif
 	bool D3d12GraphicsManager::SetPerFrameShaderParameters()
 	{
-		//temp
-		draw_frame_context_.view_matrix_ = Transpose(p_cam_mgr_->GetCamera().GetView());
-		draw_frame_context_.projection_matrix_ = Transpose(p_cam_mgr_->GetCamera().GetProjection());
-		draw_frame_context_.camera_position_ = Vector4f(p_cam_mgr_->GetCamera().GetPosition(),1.f);
 		memcpy(p_cbv_data_begin_ + cur_back_buf_index_ * kSizeConstantBufferPerFrame, &draw_frame_context_, sizeof(draw_frame_context_));
 		return true;
 	}
@@ -137,97 +285,109 @@ namespace Engine
 		memcpy(p_cbv_data_begin_ + offset,&pbc, sizeof(PerBatchConstants));
 		return true;
 	}
-	HRESULT D3d12GraphicsManager::InitializeBuffers()
+	void D3d12GraphicsManager::UpdateConstants()
+	{
+		GraphicsManager::UpdateConstants();
+		SetPerFrameShaderParameters();
+		//DrawBox(Vector3f{0.f,0.f,0.f}, Vector3f{ 500.f,500.f,500.f }, Vector3f{ 0.f,0.f,0.f });
+		//DrawLine(Vector3f{0.f,0.f,0.f}, Vector3f{ 500.f,500.f,500.f }, Vector3f{ 0.f,0.f,0.f });
+		int i = 0;
+		for(auto dbc : draw_batch_contexts_)
+			SetPerBatchShaderParameters(i++);
+	}
+	void D3d12GraphicsManager::InitializeBuffers(const Scene& scene)
 	{
 		HRESULT hr = S_OK;
-		//TODO using kinds of buffer
-		if (FAILED(hr = CreateDepthStencil())) return hr;
-		if (FAILED(hr = CreateConstantBuffer())) return hr;
-		if (FAILED(hr = CreateSamplerBuffer())) return hr;
-		auto* scene = g_pSceneManager->GetSceneForRendering();
-		for(auto _it : scene->Materials)
+		NE_LOG(ALL,kNormal,"CreateConstantBuffer...")
+		ThrowIfFailed(hr = CreateConstantBuffer());
+		NE_LOG(ALL, kNormal, "Done")
+
+		NE_LOG(ALL, kNormal, "CreateSamplerBuffer...")
+		ThrowIfFailed(hr = CreateSamplerBuffer());
+		NE_LOG(ALL, kNormal, "Done")
+
+		for (auto& _it : scene.Materials)
 		{
 			auto material = _it.second;
-			if(material)
+			if (material)
 			{
 				auto color = material->GetBaseColor();
-				if(auto texture = color.value_map_)
+				if (auto& texture = color.value_map_)
 					ThrowIfFailed(hr = CreateTextureBuffer(*texture));
 			}
 		}
-		if (scene != nullptr) 
+		for(auto& it : scene.GeometryNodes)
 		{
-			auto pGeometryNode = scene->GetFirstGeometryNode();
-			int32_t n = 0;
-			while (pGeometryNode)
+			auto pGeometryNode = it.second;
+			if (pGeometryNode->Visible())
 			{
-				if (pGeometryNode->Visible()) 
+				auto pGeometry = scene.GetGeometry(pGeometryNode->GetSceneObjectRef());
+				assert(pGeometry);
+				auto pMesh = pGeometry->GetMesh().lock();
+				if (!pMesh) continue;
+				// Set the number of vertex properties.
+				auto vertexPropertiesCount = pMesh->GetVertexPropertiesCount();
+				// Set the number of vertices in the vertex array.
+				size_t vertex_count = 0;
+				for (decltype(vertexPropertiesCount) i = 0; i < vertexPropertiesCount; i++)
 				{
-					auto pGeometry = scene->GetGeometry(pGeometryNode->GetSceneObjectRef());
-					assert(pGeometry);
-					auto pMesh = pGeometry->GetMesh().lock();
-					if (!pMesh) continue;
-					// Set the number of vertex properties.
-					auto vertexPropertiesCount = pMesh->GetVertexPropertiesCount();
-					// Set the number of vertices in the vertex array.
-					size_t vertex_count = 0;
-					for (decltype(vertexPropertiesCount) i = 0; i < vertexPropertiesCount; i++) 
-					{
-						const SceneObjectVertexArray& v_property_array = pMesh->GetVertexPropertyArray(i);
-						if(v_property_array.GetType() == EVertexArrayType::kVertex)
-							vertex_count = v_property_array.GetVertexCount();
-						CreateVertexBuffer(v_property_array);
-					}
-					if (vertex_count != 0)
-					{
-						DrawBatchContext dbc{};
-						dbc.count = vertex_count;
-						dbc.node = pGeometryNode;
-						//TODO:vertex has multi material slot
-						auto mat = scene->GetMaterial(pGeometryNode->GetMaterialRef(0));
-						if(mat)	dbc.material = mat;
-						draw_batch_contexts_.push_back(std::move(dbc));
-						draw_batch_contexts_.back().vertex_buf_len_ = vertexPropertiesCount;
-						draw_batch_contexts_.back().vertex_buf_start_ = vertex_buf_view_.size() - vertexPropertiesCount;
-						++n;
-					}
+					const SceneObjectVertexArray& v_property_array = pMesh->GetVertexPropertyArray(i);
+					if (v_property_array.GetType() == EVertexArrayType::kVertex)
+						vertex_count = v_property_array.GetVertexCount();
+					CreateVertexBuffer(v_property_array);
 				}
-				pGeometryNode = scene->GetNextGeometryNode();
+				if (vertex_count != 0)
+				{
+					DrawBatchContext dbc{};
+					dbc.count = vertex_count;
+					dbc.node = pGeometryNode;
+					//TODO:vertex has multi material slot
+					auto mat = scene.GetMaterial(pGeometryNode->GetMaterialRef(0));
+					if (mat)	dbc.material = mat;
+					draw_batch_contexts_.push_back(std::move(dbc));
+					draw_batch_contexts_.back().vertex_buf_len_ = vertexPropertiesCount;
+					draw_batch_contexts_.back().vertex_buf_start_ = vertex_buf_view_.size() - vertexPropertiesCount;
+				}
 			}
 		}
-		if(SUCCEEDED(hr = p_cmdlist_->Close())) {
+		if (SUCCEEDED(hr = p_cmdlist_->Close())) 
+		{
 			ID3D12CommandList* ppCommandLists[] = { p_cmdlist_.Get() };
 			p_cmdqueue_->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-			if (FAILED(hr = p_device_->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(p_fence_.GetAddressOf())))) return hr;
+			ThrowIfFailed(p_device_->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(p_fence_.GetAddressOf())));
 			fence_value_ = 1;
 			fence_event_ = CreateEvent(NULL, FALSE, FALSE, NULL);
-			if (fence_event_ == NULL) {
-				hr = HRESULT_FROM_WIN32(GetLastError());
-				if (FAILED(hr)) return hr;
+			if (fence_event_ == NULL) 
+			{
+				ThrowIfFailed(hr = HRESULT_FROM_WIN32(GetLastError()));
 			}
 			WaitForPreviousFrame();
 		}
-		{
-			auto aspect = 16.f / 9.f;
-			Matrix4x4f view{};
-			Matrix4x4f projection{};	
-			//lenth is cm			
-			p_cam_mgr_ = std::make_unique<CameraManager>();
-			BuildViewMatrixLookAtLH(view, Vector3f{ 0.f, 0.0f, -1000.f }, Vector3f{ 0.0f, 0.0f, 1000.f }, Vector3f{ 0.0f, 1.0f, 0.0f });
-			BuildPerspectiveFovLHMatrix(projection, 1.57F, aspect, 100.f, 100000.f);
-			draw_frame_context_.view_matrix_ = Transpose(p_cam_mgr_->GetCamera().GetView());
-			draw_frame_context_.projection_matrix_ = Transpose(p_cam_mgr_->GetCamera().GetProjection());
-			draw_frame_context_.world_matrix_ = BuildIdentityMatrix();
-			draw_frame_context_.ambient_color_ = Vector4f{0.1f,0.1f,0.1f,0.f};
-			draw_frame_context_.light_color_ = Vector4f{1.f,1.f,1.f,1.f};
-			SetPerFrameShaderParameters();
-		}
-		return hr;
 	}
-	HRESULT D3d12GraphicsManager::InitializeShader(const char* vs_filename, const char* fs_filename)
+
+	void D3d12GraphicsManager::ClearBuffers()
+	{
+		p_fence_.Reset();
+		for(auto p : buffers_)
+			p.Reset();
+		buffers_.clear();
+		for(auto p : textures_)
+			p.Reset();
+		textures_.clear();
+		vertex_buf_view_.clear();         
+		index_buf_view_.clear();          
+		draw_batch_constants_.clear();
+		draw_batch_contexts_.clear();
+		textures_.clear();
+		texture_index_.clear();
+	}
+
+	bool D3d12GraphicsManager::InitializeShaders()
 	{
 		HRESULT hr = S_OK;
 		// load the shaders
+		const char* vs_filename = "Shader/vs.cso";
+		const char* fs_filename = "Shader/ps.cso";
 		Buffer vertexShader = g_pAssetLoader->OpenAndReadBinarySync(vs_filename);
 		Buffer pixelShader = g_pAssetLoader->OpenAndReadBinarySync(fs_filename);
 		D3D12_SHADER_BYTECODE vertexShaderByteCode;
@@ -264,12 +424,21 @@ namespace Engine
 		psoDesc.NumRenderTargets = 1;
 		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		psoDesc.SampleDesc.Count = 1;
-		if(FAILED(hr = p_device_->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&p_plstate_)))) return hr;
-		hr = p_device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, p_cmdalloc_.Get(), 
+		if (FAILED(hr = p_device_->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&p_plstate_)))) return hr;
+		hr = p_device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, p_cmdalloc_.Get(),
 			p_plstate_.Get(), IID_PPV_ARGS(&p_cmdlist_));
-		return hr;
+#ifdef _DEBUG
+		InitializeShaderDebug();
+#endif // _DEBUG
+
 	}
-	HRESULT D3d12GraphicsManager::RenderBuffers()
+
+	void D3d12GraphicsManager::ClearShaders()
+	{
+		p_cmdlist_.Reset();
+		p_plstate_.Reset();
+	}
+	void D3d12GraphicsManager::RenderBuffers()
 	{
 		HRESULT hr;
 		// execute the command list
@@ -277,7 +446,6 @@ namespace Engine
 		p_cmdqueue_->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 		// swap the back buffer and the front buffer
 		hr = p_swapchain->Present(1, 0);
-		return hr;
 	}
 	HRESULT D3d12GraphicsManager::CreateDescriptorHeaps()
 	{
@@ -429,27 +597,46 @@ namespace Engine
 	}
 	HRESULT D3d12GraphicsManager::PopulateCommandList()
 	{
-		HRESULT hr =S_OK;
+		HRESULT hr = S_OK;
+		//clear something
+		{
+			if (FAILED(hr = p_cmdalloc_->Reset())) return hr;
+			if (FAILED(hr = p_cmdlist_->Reset(p_cmdalloc_.Get(), p_plstate_.Get()))) return hr;
+			// Indicate that the back buffer will be used as a render target.
+			auto barrier_back_buffer = CD3DX12_RESOURCE_BARRIER::Transition(render_target_arr_[cur_back_buf_index_].Get(),
+				D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			p_cmdlist_->ResourceBarrier(1, &barrier_back_buffer);
+			//TODO:Using the depth stencil buffer
+			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(p_rtv_heap_->GetCPUDescriptorHandleForHeapStart(), cur_back_buf_index_, rtv_desc_size_);
+			CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(p_dsv_heap_->GetCPUDescriptorHandleForHeapStart());
+			p_cmdlist_->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+			// clear the back buffer to a deep blue
+			p_cmdlist_->ClearRenderTargetView(rtvHandle, kBackColor, 0, nullptr);
+			p_cmdlist_->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+		}
+		//Set necessary state
 		p_cmdlist_->SetGraphicsRootSignature(p_rootsig_.Get());
+
 		ID3D12DescriptorHeap* ppHeaps[] = { p_cbv_heap_.Get(),p_sampler_heap_.Get() };
 		p_cmdlist_->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-		 //Get the background buffer per-frame-cbv descriptor handle
+
+		p_cmdlist_->SetGraphicsRootDescriptorTable(3, p_sampler_heap_->GetGPUDescriptorHandleForHeapStart());
+
+		p_cmdlist_->RSSetViewports(1, &vp_);
+		p_cmdlist_->RSSetScissorRects(1, &rect_);
+		p_cmdlist_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		p_cmdlist_->SetPipelineState(p_plstate_.Get());
+
 		D3D12_GPU_DESCRIPTOR_HANDLE cbv_handle[2];
 		uint32_t frame_res_desc_offset = cur_back_buf_index_ * (1 + kMaxSceneObjectCount);
 		cbv_handle[0].ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + frame_res_desc_offset * cbv_srv_uav_desc_size_;
-		SetPerFrameShaderParameters();
 		p_cmdlist_->SetGraphicsRootDescriptorTable(0, cbv_handle[0]);
-		p_cmdlist_->RSSetViewports(1, &vp_);
-		p_cmdlist_->RSSetScissorRects(1, &rect_);
-		p_cmdlist_->SetGraphicsRootDescriptorTable(3,p_sampler_heap_->GetGPUDescriptorHandleForHeapStart());
-		p_cmdlist_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
 		for(uint32_t i = 0; i < draw_batch_contexts_.size(); i++) 
 		{
-			SetPerBatchShaderParameters(i);
 			cbv_handle[1].ptr = cbv_handle[0].ptr + cbv_srv_uav_desc_size_ * (i + 1);
 			p_cmdlist_->SetGraphicsRootDescriptorTable(1, cbv_handle[1]);
 			p_cmdlist_->IASetVertexBuffers(0, draw_batch_contexts_[i].vertex_buf_len_, &vertex_buf_view_[draw_batch_contexts_[i].vertex_buf_start_]);
-			//p_cmdlist_->IASetVertexBuffers(0, 3, &vertex_buf_view_[i * vertex_buf_per_frame_num_]);
 			//bind texture
 			if(draw_batch_contexts_[i].material)
 			{
@@ -463,6 +650,16 @@ namespace Engine
 			}
 			p_cmdlist_->DrawInstanced(draw_batch_contexts_[i].count,1,0,0);
 		}
+#ifdef _DEBUG
+		p_cmdlist_->SetPipelineState(p_plstate_debug_.Get());
+		p_cmdlist_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+		for (uint32_t i = 0; i < draw_batch_contexts_debug_.size(); i++)
+		{
+			auto context = draw_batch_contexts_debug_[i];
+			p_cmdlist_->IASetVertexBuffers(0, 1, &vertex_buf_view_debug_[i]);
+			p_cmdlist_->DrawInstanced(context.count, 1, 0, 0);
+		}
+#endif // _DEBUG
 		auto res_barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_target_arr_[cur_back_buf_index_].Get(),D3D12_RESOURCE_STATE_RENDER_TARGET, 
 			D3D12_RESOURCE_STATE_PRESENT);
 		p_cmdlist_->ResourceBarrier(1, &res_barrier);
@@ -513,12 +710,22 @@ namespace Engine
 		hr = factory->CreateSwapChain(p_cmdqueue_.Get(), &scd, swapChain.GetAddressOf());
 		ThrowIfFailed(hr = swapChain.As(&p_swapchain));
 		cur_back_buf_index_ = p_swapchain->GetCurrentBackBufferIndex();
+
+		NE_LOG(ALL,kWarning,"CreateDescriptorHeaps...")
 		if (FAILED(hr = CreateDescriptorHeaps())) return hr; //2
-		if (FAILED(hr = CreateRenderTarget())) return hr;
+		NE_LOG(ALL, kWarning, "Done!")
+
+		NE_LOG(ALL, kWarning, "CreateRenderTarget...")
+		if (FAILED(hr = CreateRenderTarget())) return hr; //2
+		NE_LOG(ALL, kWarning, "Done!")
+
+		NE_LOG(ALL, kWarning, "CreateDepthStencil...")
+		if (FAILED(hr = CreateDepthStencil())) return hr; //2
+		NE_LOG(ALL, kWarning, "Done!")
+
+		NE_LOG(ALL, kWarning, "CreateRootSignature...")
 		if (FAILED(hr = CreateRootSignature())) return hr;
-		//if (FAILED(hr = InitializeShader("Shader/simple_vs.cso", "Shader/simple_ps.cso"))) return hr; //5
-		if (FAILED(hr = InitializeShader("Shader/vs.cso", "Shader/ps.cso"))) return hr; //5
-		if (FAILED(hr = InitializeBuffers())) return hr;
+		NE_LOG(ALL, kWarning, "Done!")
 		return hr;
 	}
 	HRESULT D3d12GraphicsManager::CreateSamplerBuffer()
@@ -677,17 +884,12 @@ namespace Engine
 		buffers_.push_back(pIndexBufferUpdate);
 		return hr;
 	}
-	HRESULT D3d12GraphicsManager::CreateVertexBuffer(const SceneObjectVertexArray& vertex_array)
+	HRESULT D3d12GraphicsManager::CreateVertexBuffer(const SceneObjectVertexArray& vertex_array, bool b_debug)
 	{
 		HRESULT hr = S_OK;
 		const uint32_t vertexBufferSize = vertex_array.GetDataSize();
 		if(vertexBufferSize == 0)
 		{
-			D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
-			vertexBufferView.BufferLocation = NULL;
-			vertexBufferView.StrideInBytes = 0;
-			vertexBufferView.SizeInBytes = 0;
-			vertex_buf_view_.emplace_back(std::move(vertexBufferView));
 			NE_LOG(ALL,kWarning,"some vertex_array has 0 data size")
 			return hr;
 		}

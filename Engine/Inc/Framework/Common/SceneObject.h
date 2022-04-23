@@ -58,7 +58,8 @@ namespace Engine
     {
         kVertex,
         kNormal,
-        kUVs
+        kUVs,
+        kColor
     };
 
     enum class ESceneObjectCollisionType

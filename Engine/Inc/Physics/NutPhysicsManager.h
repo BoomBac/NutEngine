@@ -5,7 +5,7 @@
 
 namespace Engine
 {
-	class NutPhysicsManager : IPhysicsManager
+	class NutPhysicsManager : public IPhysicsManager
 	{
 	public:
 		int Initialize() override;

@@ -12,6 +12,13 @@ struct VSOutput
 	float4 position : SV_POSITION;
 	float3 normal : NORMAL;
 };
+
+struct VSOutputDebug
+{
+	float4 position : SV_POSITION;
+	float3 color : COLOR;
+};
+
 cbuffer DrawFrameContext : register(b0)
 {
 	float4x4 g_world_matrix_;

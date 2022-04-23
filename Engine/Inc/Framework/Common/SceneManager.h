@@ -13,7 +13,8 @@ namespace Engine
         void Tick() override;
         int LoadScene(const char* scene_file_name);
         int LoadScene();
-        Scene* GetSceneForRendering();
+        Scene& GetSceneForRendering() const;
+        Scene& GetSceneForPhysicalSimulation() const;
         bool IsSceneChanged();
         void NotifySceneIsRenderingQueued();
         void ResetScene();
