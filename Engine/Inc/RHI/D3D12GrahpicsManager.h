@@ -79,7 +79,8 @@ namespace Engine
         static constexpr uint32_t           kMaxSceneObjectCount = 65535;
         static constexpr uint32_t           kMaxTextureCount = 2048;
         static constexpr uint32_t		    kTextureDescStartIndex = kFrameCount * (1 + kMaxSceneObjectCount);
-        static constexpr FLOAT              kBackColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+        static constexpr FLOAT              kBackColor[] = { 0.3f, 0.3f, 0.3f, 1.0f };
+
         
         ComPtr<ID3D12Device> p_device_ = nullptr;             // the pointer to our Direct3D device interface
         D3D12_VIEWPORT                  vp_;                         // viewport structure
@@ -113,9 +114,10 @@ namespace Engine
         std::map<std::string,INT32> texture_index_;
 #ifdef _DEBUG
         UINT8* p_vex_data_begin = nullptr;
+        UINT8* p_color_data_begin = nullptr;
         std::vector<DrawDebugBatchContext> draw_batch_contexts_debug_;
         ComPtr<ID3D12PipelineState> p_plstate_debug_ = nullptr;
-        ComPtr<ID3D12Resource>    buffers_debug_;
+        std::vector<ComPtr<ID3D12Resource>>    buffers_debug_;
         std::vector<D3D12_VERTEX_BUFFER_VIEW>       vertex_buf_view_debug_;
         Vector3f* vertex_data_debug_ = nullptr;
         Vector3f* color_data_debug_ = nullptr;
@@ -123,8 +125,8 @@ namespace Engine
 #endif
         uint8_t* p_cbv_data_begin_ = nullptr;
         // CB size is required to be 256-byte aligned.
-        static constexpr size_t				kSizePerBatchConstantBuffer = (sizeof(PerBatchConstants) + 255) & 256;
-        static constexpr size_t				kSizePerFrameConstantBuffer = (sizeof(DrawFrameContext) + 255) & 256; // CB size is required to be 256-byte aligned.
+        static constexpr size_t				kSizePerBatchConstantBuffer = (sizeof(PerBatchConstants) + 255) & ~255;
+        static constexpr size_t				kSizePerFrameConstantBuffer = (sizeof(DrawFrameContext) + 255) & ~255; // CB size is required to be 256-byte aligned.
         static constexpr size_t				kSizeConstantBufferPerFrame = kSizePerFrameConstantBuffer + kSizePerBatchConstantBuffer * kMaxSceneObjectCount;
         // Synchronization objects
         uint32_t                        cur_back_buf_index_;

@@ -81,10 +81,11 @@ bool Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, 
 		auto _node = std::make_shared<SceneLightNode>(object_name);
 		const fbxsdk::FbxLight* _light = FbxCast<fbxsdk::FbxLight>(attribute);
 		_node->SetIfCastShadow(_light->CastShadows.Get());
-		_node->AddSceneObjectRef(object_name);
+		_node->AddSceneObjectRef(_light->GetName());
 		scene.LightNodes.emplace(object_name, _node);
 		node = _node;
 		GenerateLight(_light, scene);
+		_node->AppendChild(GenerateTransform(object));
 	}
 	break;
 	case FbxNodeAttribute::EType::eCamera:
@@ -181,7 +182,6 @@ std::shared_ptr<SceneObjectTransform> Engine::FbxParser::GenerateTransform(fbxsd
 	return make_shared<SceneObjectTransform>(res);
 }
 
-
 void Engine::FbxParser::GenerateCamera(const fbxsdk::FbxCamera* camera, Scene& scene)
 {
 	string camera_name = camera->GetName();
@@ -231,18 +231,21 @@ void Engine::FbxParser::GenerateMaterial(const fbxsdk::FbxSurfaceMaterial* mat, 
 						{
 							p_thread_pool_->Enqueue(&FbxParser::CopyTexture,this, std::string(file_texture->GetFileName()), 
 								std::string(kAssetTexturePath), file_name);
+							if(fs::exists(file_texture->GetFileName()))
 							material->SetTexture(SceneObjectMaterial::kDiffuse, std::string(kAssetTexturePath).append(file_name));
 						}						
 						else if(texture_type == "SpecularColor")
 						{
 							p_thread_pool_->Enqueue(&FbxParser::CopyTexture, this, std::string(file_texture->GetFileName()),
 								std::string(kAssetTexturePath), file_name);
+							if (fs::exists(file_texture->GetFileName()))
 							material->SetTexture(SceneObjectMaterial::kSpecular, std::string(kAssetTexturePath).append(file_name));
 						}
 						else if(texture_type == "NormalMap")
 						{
 							p_thread_pool_->Enqueue(&FbxParser::CopyTexture, this, std::string(file_texture->GetFileName()),
 								std::string(kAssetTexturePath), file_name);
+							if (fs::exists(file_texture->GetFileName()))
 							material->SetTexture(SceneObjectMaterial::kNormalMap, std::string(kAssetTexturePath).append(file_name));
 						}
 					}
@@ -268,15 +271,30 @@ void Engine::FbxParser::GenerateLight(const fbxsdk::FbxLight* light, Scene& scen
 	case fbxsdk::FbxLight::EType::eSpot:
 	{
 		_light = make_shared<SceneObjectSpotLight>();
+		auto spot = std::dynamic_pointer_cast<SceneObjectSpotLight>(_light);
+		spot->inner_angle_ = static_cast<float>(light->InnerAngle.Get());
+		spot->outer_angle_ = static_cast<float>(light->OuterAngle.Get());
 	}
 	break;
 	//TODO
-	case fbxsdk::FbxLight::EType::eArea: break;
-	case fbxsdk::FbxLight::EType::eDirectional: break;
+	case fbxsdk::FbxLight::EType::eArea: 
+	{
+		auto x = light->LeftBarnDoor.Get();
+		auto y = light->RightBarnDoor.Get();
+		auto z = light->InnerAngle.Get();
+		auto w = light->OuterAngle.Get();
+	}
+	break;
+	case fbxsdk::FbxLight::EType::eDirectional: 
+	{
+		_light = make_shared<SceneObjectDirectonalLight>();
+	}
+	break;
 	case fbxsdk::FbxLight::EType::eVolume: break;
 	default:
 		break;
 	}
+	if(_light == nullptr) return;
 	_light->SetIfCastShadow(light->CastShadows.Get());
 	string lcolor = "color";
 	Vector4f temp{};
@@ -286,7 +304,14 @@ void Engine::FbxParser::GenerateLight(const fbxsdk::FbxLight* light, Scene& scen
 	temp.a = 1.f;
 	_light->SetColor(lcolor, temp);
 	lcolor = "intensity";
-	_light->SetParam(lcolor, static_cast<float>(light->Intensity.Get()));
+	_light->SetParam(lcolor, static_cast<float>(light->Intensity.Get()));	
+	auto a = light->FarAttenuationEnd.Get();
+	auto b = light->FarAttenuationStart.Get();
+	auto c = light->NearAttenuationEnd.Get();
+	auto d = light->NearAttenuationStart.Get();
+	auto x = light->DecayStart.Get();
+	auto e = light->DecayType.Get();
+	auto f = light->DecayStart.Get();
 	scene.Lights[light->GetName()] = _light;
 }
 
@@ -300,18 +325,20 @@ bool FbxParser::GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::F
 	//The vertex must be added to the MeshObject's vector before the normal, 
 	//because the input layout is passed in the vertex-normal order
 	//not thread safe now 
-	//auto ret1 = p_thread_pool_->Enqueue(&FbxParser::ReadVertex,this,std::ref(*mesh),nut_mesh);
-	//auto ret2 = p_thread_pool_->Enqueue(&FbxParser::ReadNormal, this, std::ref(*mesh), nut_mesh);
-	//auto ret3 = p_thread_pool_->Enqueue(&FbxParser::ReadUVs, this, std::ref(*mesh), nut_mesh);
-
-	auto ret1 = ReadVertex(*mesh,nut_mesh);
-	auto ret2 = ReadNormal(*mesh,nut_mesh);
-	auto ret3 = ReadUVs(*mesh,nut_mesh);
-	if(ret1&& ret2&& ret3)
+	auto ret1 = p_thread_pool_->Enqueue(&FbxParser::ReadVertex,this,std::ref(*mesh),nut_mesh);
+	auto ret2 = p_thread_pool_->Enqueue(&FbxParser::ReadNormal, this, std::ref(*mesh), nut_mesh);
+	//auto ret1 = ReadVertex(*mesh,nut_mesh);
+	//auto ret2 = ReadNormal(*mesh,nut_mesh);
+	//auto ret3 = ReadUVs(*mesh,nut_mesh);
+	if(ret1.get()&& ret2.get())
 	{
-		geo->AddMesh(nut_mesh);
-		scene.Geometries[mesh->GetName()] = geo;
-		return true;
+		if(p_thread_pool_->Enqueue(&FbxParser::ReadUVs, this, std::ref(*mesh), nut_mesh).get())
+		{
+			geo->AddMesh(nut_mesh);
+			scene.Geometries[mesh->GetName()] = geo;
+			return true;
+		}
+
 	}
 	return false;
 }

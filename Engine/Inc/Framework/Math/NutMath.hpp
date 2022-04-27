@@ -122,6 +122,7 @@ namespace Engine
 			T data[4];
 			struct { T x, y, z, w; };
 			struct { T r, g, b, a; };
+			Swizzle<Vector3D, T, 0, 1, 2> xyz;
 			Swizzle<Vector3D, T, 0, 2, 1> xzy;
 			Swizzle<Vector3D, T, 1, 0, 2> yxz;
 			Swizzle<Vector3D, T, 1, 2, 0> yzx;
@@ -771,6 +772,13 @@ namespace Engine
 			}
 		}
 		return out_mat;
+	}
+
+	namespace Colors
+	{
+		static const Vector3f kBlue = { 0.f,0.f,1.f };
+		static const Vector3f kRed = { 1.f,0.f,0.f };
+		static const Vector3f kGreen = { 0.f,1.f,0.f };
 	}
 }
 

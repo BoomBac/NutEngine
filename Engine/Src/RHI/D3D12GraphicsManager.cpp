@@ -71,11 +71,14 @@ namespace Engine
 	}
 	void D3d12GraphicsManager::Draw()
 	{
+		//temp draw axis
+		DrawLine(kOrigin,kForward,Colors::kBlue);
+		DrawLine(kOrigin,kUp,Colors::kGreen);
+		DrawLine(kOrigin,kRight,Colors::kRed);
 		PopulateCommandList();
-		//clear debug vertex data
-
 		GraphicsManager::Draw();
 		WaitForPreviousFrame();
+		//clear debug vertex data
 		ClearVertexData();
 	}
 #ifdef _DEBUG
@@ -86,18 +89,11 @@ namespace Engine
 		vertex_data_debug_[cur_debug_vertex_pos] = to;
 		color_data_debug_[cur_debug_vertex_pos++] = color;
 		memcpy(p_vex_data_begin, vertex_data_debug_, cur_debug_vertex_pos * 12);
+		memcpy(p_color_data_begin, color_data_debug_, cur_debug_vertex_pos * 12);
 		draw_batch_contexts_debug_[0].count += 2;
 	}
 	void D3d12GraphicsManager::DrawBox(const Vector3f& bbMin, const Vector3f& bbMax, const Vector3f& color)
 	{
-		static bool init = false;
-		if(!init)
-		{
-			DrawDebugBatchContext dbc{};
-			dbc.count = 0;
-			draw_batch_contexts_debug_.push_back(std::move(dbc));
-			init = true;
-		}
 		const auto pre_offset = cur_debug_vertex_pos;
 		//bottom
 		vertex_data_debug_[cur_debug_vertex_pos] = bbMin;
@@ -178,13 +174,15 @@ namespace Engine
 		vertex_data_debug_[cur_debug_vertex_pos].x = bbMin.x;
 		color_data_debug_[cur_debug_vertex_pos++] = color;
 		memcpy(p_vex_data_begin + pre_offset * 12, &vertex_data_debug_[pre_offset], 288);
+		memcpy(p_color_data_begin + pre_offset * 12, &color_data_debug_[pre_offset], 288);
 		draw_batch_contexts_debug_[0].count += 24;
 	}
 	void D3d12GraphicsManager::ClearDebugBuffers()
 	{
 		vertex_buf_view_debug_.clear();
 		draw_batch_contexts_debug_.clear();
-		buffers_debug_.Reset();
+		for(auto& buf : buffers_debug_)
+			buf.Reset();
 		cur_debug_vertex_pos = 0;
 	}
 	void D3d12GraphicsManager::ClearVertexData()
@@ -201,14 +199,29 @@ namespace Engine
 		D3D12_HEAP_PROPERTIES prop = { D3D12_HEAP_TYPE_UPLOAD,D3D12_CPU_PAGE_PROPERTY_UNKNOWN,D3D12_MEMORY_POOL_UNKNOWN,1,1 };
 		const size_t cb_size = sizeof(Vector3f) * 2048;
 		auto buf_desc = CD3DX12_RESOURCE_DESC::Buffer(cb_size);
-		p_device_->CreateCommittedResource(&prop, D3D12_HEAP_FLAG_NONE, &buf_desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,IID_PPV_ARGS(&buffers_debug_));
+		ComPtr<ID3D12Resource> vertex_buf;
+		p_device_->CreateCommittedResource(&prop, D3D12_HEAP_FLAG_NONE, &buf_desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,IID_PPV_ARGS(&vertex_buf));
 		D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
-		vertexBufferView.BufferLocation = buffers_debug_->GetGPUVirtualAddress();
+		vertexBufferView.BufferLocation = vertex_buf->GetGPUVirtualAddress();
 		vertexBufferView.StrideInBytes = 12;
 		vertexBufferView.SizeInBytes = cb_size;
 		vertex_buf_view_debug_.emplace_back(std::move(vertexBufferView));
 		D3D12_RANGE readRange = { 0, 0 };
-		buffers_debug_->Map(0, &readRange, reinterpret_cast<void**>(&p_vex_data_begin));
+		vertex_buf->Map(0, &readRange, reinterpret_cast<void**>(&p_vex_data_begin));
+
+		ComPtr<ID3D12Resource> color_buf;
+		p_device_->CreateCommittedResource(&prop, D3D12_HEAP_FLAG_NONE, &buf_desc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&color_buf));
+		D3D12_VERTEX_BUFFER_VIEW colorBufferView;
+		colorBufferView.BufferLocation = color_buf->GetGPUVirtualAddress();
+		colorBufferView.StrideInBytes = 12;
+		colorBufferView.SizeInBytes = cb_size;
+		vertex_buf_view_debug_.emplace_back(std::move(colorBufferView));
+		color_buf->Map(0,&readRange, reinterpret_cast<void**>(&p_color_data_begin));
+		buffers_debug_.emplace_back(std::move(vertex_buf));
+		buffers_debug_.emplace_back(std::move(color_buf));
+		DrawDebugBatchContext dbc{};
+		dbc.count = 0;
+		draw_batch_contexts_debug_.push_back(std::move(dbc));
 	}
 	void D3d12GraphicsManager::InitializeShaderDebug()
 	{
@@ -226,7 +239,7 @@ namespace Engine
 		D3D12_INPUT_ELEMENT_DESC ied[] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			//{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		};
 		//Create DepthSenticil Desc
 		const D3D12_DEPTH_STENCILOP_DESC defaultStencilOp = { D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_COMPARISON_FUNC_ALWAYS };
@@ -252,7 +265,17 @@ namespace Engine
 #endif
 	bool D3d12GraphicsManager::SetPerFrameShaderParameters()
 	{
-		memcpy(p_cbv_data_begin_ + cur_back_buf_index_ * kSizeConstantBufferPerFrame, &draw_frame_context_, sizeof(draw_frame_context_));
+		UINT8* p_head = p_cbv_data_begin_ + cur_back_buf_index_ * kSizeConstantBufferPerFrame;
+		size_t offset = reinterpret_cast<UINT8*>(&draw_frame_context_.lights_) - reinterpret_cast<UINT8*>(&draw_frame_context_);
+		memcpy(p_head, &draw_frame_context_, offset);
+		p_head += offset;
+		int i = 0;
+		for(auto& light : draw_frame_context_.lights_)
+		{
+			size_t size = ALIGN(sizeof(Light), 16);
+			memcpy(p_head, &draw_frame_context_.lights_[i++], size);
+			p_head += size;
+		}
 		return true;
 	}
 	bool D3d12GraphicsManager::SetPerBatchShaderParameters(int32_t index)
@@ -281,7 +304,13 @@ namespace Engine
 			Parameter param = mat->GetSpecularPower();
 			pbc.specular_power = param.value_;
 		}
-		uint32_t offset = cur_back_buf_index_ * kSizeConstantBufferPerFrame + kSizePerFrameConstantBuffer + index * kSizePerFrameConstantBuffer;
+		else
+		{
+			pbc.base_color = Vector4f(1.f);
+			pbc.use_texture = 0.f;
+			pbc.specular_color = pbc.base_color;
+		}
+		uint32_t offset = cur_back_buf_index_ * kSizeConstantBufferPerFrame + kSizePerFrameConstantBuffer + index * kSizePerBatchConstantBuffer;
 		memcpy(p_cbv_data_begin_ + offset,&pbc, sizeof(PerBatchConstants));
 		return true;
 	}
@@ -289,8 +318,6 @@ namespace Engine
 	{
 		GraphicsManager::UpdateConstants();
 		SetPerFrameShaderParameters();
-		//DrawBox(Vector3f{0.f,0.f,0.f}, Vector3f{ 500.f,500.f,500.f }, Vector3f{ 0.f,0.f,0.f });
-		//DrawLine(Vector3f{0.f,0.f,0.f}, Vector3f{ 500.f,500.f,500.f }, Vector3f{ 0.f,0.f,0.f });
 		int i = 0;
 		for(auto dbc : draw_batch_contexts_)
 			SetPerBatchShaderParameters(i++);
@@ -656,7 +683,7 @@ namespace Engine
 		for (uint32_t i = 0; i < draw_batch_contexts_debug_.size(); i++)
 		{
 			auto context = draw_batch_contexts_debug_[i];
-			p_cmdlist_->IASetVertexBuffers(0, 1, &vertex_buf_view_debug_[i]);
+			p_cmdlist_->IASetVertexBuffers(0, 2, &vertex_buf_view_debug_[i]);
 			p_cmdlist_->DrawInstanced(context.count, 1, 0, 0);
 		}
 #endif // _DEBUG

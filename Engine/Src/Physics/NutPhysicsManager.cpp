@@ -20,14 +20,14 @@ namespace Engine
 
 	void NutPhysicsManager::Tick()
 	{
-		if(g_pSceneManager->IsSceneChanged())
-		{
-			ClearRigidBodies();
-			CreateRigidBodies();
-			//g_pSceneManager->NotifySceneIsRenderingQueued();
-		}
-		//temp
-		DrawDebugInfo();
+		//if(g_pSceneManager->IsSceneChanged())
+		//{
+		//	ClearRigidBodies();
+		//	CreateRigidBodies();
+		//	//g_pSceneManager->NotifySceneIsRenderingQueued();
+		//}
+		////temp
+		//DrawDebugInfo();
 	}
 
 	void NutPhysicsManager::CreateRigidBody(SceneGeometryNode& node, const SceneObjectGeometry& geometry)
@@ -154,7 +154,7 @@ namespace Engine
 	}
 	void NutPhysicsManager::DrawAabb(const Geometry& geometry, const Matrix4x4f& trans)
 	{
-		Vector3f bbmin,bbmax,color{1.f,1.f,1.f};
+		Vector3f bbmin,bbmax,color{1.f,0.f,1.f};
 		geometry.GetAabb(trans,bbmin,bbmax);
 		g_pGraphicsManager->DrawBox(bbmin,bbmax,color);
 	}

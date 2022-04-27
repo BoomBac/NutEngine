@@ -10,6 +10,8 @@
 #include "Framework/Common/TimerManager.h"
 #include "Physics/NutPhysicsManager.h"
 
+#include "Game/Empty.h"
+
 namespace Engine
 {
     GfxConfiguration config(8, 8, 8, 8, 32, 0, 0, 1280, 720, "NutEngine");
@@ -22,6 +24,7 @@ namespace Engine
     LogManager* g_pLogManager = new LogManager();
     TimerManager* g_pTimerManager = new TimerManager();
     IPhysicsManager* g_pPhysicsManager = new NutPhysicsManager();
+    GameLogic* g_pGameLogic = new Empty();
 }
 using namespace Engine;
 using Engine::g_pApp;
@@ -40,16 +43,8 @@ int main(int argc, char *argv[])
     int error = 0;
     error += g_pLogManager->Initialize();
     error += g_pApp->Initialize();
-    error += g_pPhysicsManager->Initialize();
-    error += g_pTimerManager->Initialize();
-    error += g_pMemoryManager->Initialize();
-    error += g_pAssetLoader->Initialize();
-    error += g_pSceneManager->Initialize();
-    assert(error==0);
     g_pAssetLoader->AddSearchPath("H:/Project_VS2019/NutEngine/Engine");
     g_pSceneManager->LoadScene();
-    error += g_pGraphicsManager->Initialize();
-    error += g_InputManager->Initialize();
     assert(error==0);
     NE_LOG(ALL, kWarning, "Editor launch")
     g_pTimerManager->Reset();
@@ -57,16 +52,7 @@ int main(int argc, char *argv[])
     while (p_main_window->isVisible())
     {
         g_pApp->Tick();
-        g_pTimerManager->Tick();
-        g_pPhysicsManager->Tick();
-        g_pGraphicsManager->Tick();
     }
     g_pApp->Finalize();
-    g_pGraphicsManager->Finalize();
-    g_InputManager->Finalize();
-    g_pMemoryManager->Finalize();
-    g_pAssetLoader->Finalize();
-    g_pLogManager->Finalize();
-    g_pPhysicsManager->Finalize();
     return 0;
 }

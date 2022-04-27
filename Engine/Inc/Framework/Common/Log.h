@@ -112,6 +112,8 @@ namespace Engine
 #define NE_LOG(maker,Level,msg,...) Log(maker,Level,msg,##__VA_ARGS__);
 }
 
+using Engine::ALL;
+using Engine::ETraceLevel;
 
 #endif // !__LOG_MANAGER_H__
 

@@ -19,6 +19,7 @@ namespace Engine
 		virtual void RequestQuit() = 0;
 
 		virtual void* GetMainWindowHandler() = 0;
+		virtual void OnDraw() = 0;
 
 		[[nodiscard]] virtual const GfxConfiguration& GetConfiguration() const = 0;
 

@@ -42,18 +42,40 @@ namespace Engine
 		virtual void RenderDebugBuffers();
 #endif
 	protected:
-		struct DrawFrameContext {
+		struct Light
+		{
+			Vector3f    light_position;
+			float		light_instensity;
+			Vector3f    light_direction;
+			float		inner_angle;
+			Vector3f    light_color;
+			float		outer_angle;
+			float		falloff_begin;
+			float		falloff_end;
+			int			type;
+			float		is_able;
+		};
+		struct DrawFrameContext 
+		{
 			Matrix4x4f  world_matrix_;
 			Matrix4x4f  view_matrix_;
 			Matrix4x4f  projection_matrix_;
 			Vector4f    ambient_color_;
-			Vector4f    light_color_;
-			Vector4f    light_position_;
-			Vector4f	camera_position_;
+			Vector3f	camera_position_;
+			float		is_able;
+			Light lights_[32];
 		};
 		DrawFrameContext    draw_frame_context_;
 		//temp
 		std::unique_ptr<CameraManager> p_cam_mgr_;
+
+		inline static const Vector3f			kOrigin = { 0.f,0.f,0.f };
+		inline static const Vector3f			kForward = { 0.f,0.f,100000.f };
+		inline static const Vector3f			kRight = { 100000.f,0.f,0.f };
+		inline static const Vector3f			kUp = { 0.f,100000.f,0.f };
+
+		inline static const Vector4f			kDefaultLightColor = { 1.f,1.f,1.f,1.f};
+		inline static const Vector4f			kDefaultAmbientLight = { 0.2f,0.2f,0.2f,1.f};
 	};
 	extern GraphicsManager* g_pGraphicsManager;
 }

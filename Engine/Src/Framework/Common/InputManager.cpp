@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Framework/Common/InputManager.h"
 #include "Framework/Common/GraphicsManager.h"
+#include "Framework/Common/Log.h"
 
 int Engine::InputManager::Initialize()
 {
@@ -36,6 +37,13 @@ void Engine::InputManager::ButtonDown(EKeyButton btn)
 	else if (btn == EKeyButton::kS)
 	{
 		g_pGraphicsManager->MoveCameraForward(-200.f);
+	}
+	else if (btn == EKeyButton::kArrowLeft)
+	{
+#ifdef _DEBUG
+		NE_LOG(ALL,kNormal,"ArrowLeft key down")
+#endif // _DEBUG
+		g_pGameLogic->OnLeftKeyDown();
 	}
 }
 

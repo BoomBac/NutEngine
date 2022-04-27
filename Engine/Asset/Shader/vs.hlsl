@@ -1,4 +1,5 @@
 #include "type.hlsli"
+#include "cbuffer.hlsli"
 
 
 PSInput main(float3 position : POSITION, float3 normal : NORMAL,float2 uv : TEXCOORD) 
@@ -9,7 +10,7 @@ PSInput main(float3 position : POSITION, float3 normal : NORMAL,float2 uv : TEXC
 	float4x4 mvp_matrix = mul(world_matrix, vp_matrix);
 	res.position = mul(float4(position, 1.f), mvp_matrix);
 	res.normal = mul(float4(normal,1.f),g_normal_matrix_);
-	res.positionW = position;
+	res.positionW = mul(float4(position, 1.f), world_matrix);
 	res.uv = uv;
 	return res;
 }

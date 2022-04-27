@@ -198,6 +198,9 @@
     <ClInclude Include="Inc\Physics\MotionState.h">
       <Filter>Inc\Physics</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\GameLogic.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -266,6 +269,9 @@
     <ClCompile Include="Src\Physics\NutPhysicsManager.cpp">
       <Filter>Src\Physics</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Framework\Common\GameLogic.cpp">
+      <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Asset\Shader\vs.hlsl">
@@ -283,6 +289,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Asset\Shader\type.hlsli">
+      <Filter>Shader</Filter>
+    </None>
+    <None Include="Asset\Shader\cbuffer.hlsli">
       <Filter>Shader</Filter>
     </None>
   </ItemGroup>

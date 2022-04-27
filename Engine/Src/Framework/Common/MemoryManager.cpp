@@ -2,9 +2,7 @@
 #include "Framework/Common/MemoryManager.hpp"
 
 
-#ifndef ALIGN
-#define ALIGN(x, a)         (((x) + ((a) - 1)) & ~((a) - 1))
-#endif
+
 
 using namespace Engine;
 

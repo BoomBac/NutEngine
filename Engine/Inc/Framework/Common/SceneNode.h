@@ -37,10 +37,19 @@ namespace Engine
 			}
 			return result;
 		}
+		Vector3f GetWorldPosition()
+		{
+			auto transf = *GetCalculatedTransform().get();
+			position_.x = transf[3][0];
+			position_.y = transf[3][1];
+			position_.z = transf[3][2];
+			return position_;
+		}
 	protected:
 		string name_;
 		list<std::shared_ptr<BaseSceneNode>> children_;
 		list<std::shared_ptr<SceneObjectTransform>> transforms_;
+		Vector3f position_;
 	};
 	using SceneRootNode = BaseSceneNode;
 	template <typename T>
@@ -84,7 +93,6 @@ namespace Engine
 			p_rigid_body_ = nullptr;
 			return rigidBody;
 		}
-
 		void* RigidBody() { return p_rigid_body_; }
 	protected:
 		bool        b_visible_;
@@ -100,6 +108,12 @@ namespace Engine
 		using SceneNode::SceneNode;
 		void SetIfCastShadow(bool shadow) { b_shadow_ = shadow; };
 		const bool CastShadow() { return b_shadow_; };
+		Vector3f GetForwardDir() const
+		{
+			Vector3f down{ 0.f,1.f,0.f };
+			TransformNormal(down, *GetCalculatedTransform().get());
+			return down;
+		}
 	protected:
 		bool b_shadow_;
 	};

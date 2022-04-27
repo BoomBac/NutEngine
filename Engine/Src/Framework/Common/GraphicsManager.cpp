@@ -125,17 +125,62 @@ void Engine::GraphicsManager::CalculateCameraMatrix()
     const GfxConfiguration& conf = g_pApp->GetConfiguration();
     auto aspect = static_cast<float>(conf.viewport_width_) / static_cast<float>(conf.viewport_height_);
     //lenth is cm			
-    draw_frame_context_.camera_position_ = Vector4f(p_cam_mgr_->GetCamera().GetPosition(),1.f);
+    draw_frame_context_.camera_position_ = p_cam_mgr_->GetCamera().GetPosition();
     draw_frame_context_.view_matrix_ = Transpose(p_cam_mgr_->GetCamera().GetView());
     draw_frame_context_.projection_matrix_ = Transpose(p_cam_mgr_->GetCamera().GetProjection());
     draw_frame_context_.world_matrix_ = BuildIdentityMatrix();
-    draw_frame_context_.ambient_color_ = Vector4f{ 0.1f,0.1f,0.1f,0.f };
-    draw_frame_context_.light_color_ = Vector4f{ 1.f,1.f,1.f,1.f };
 }
 
 void Engine::GraphicsManager::CalculateLights()
 {
+    auto& scene = g_pSceneManager->GetSceneForRendering();
+    if(scene.GetFirstLightNode())
+    {
+        int i = 0;
+        for (auto& node : scene.LightNodes)
+        {
+            if (auto light = scene.GetLight(node.second->GetSceneObjectRef()); light != nullptr)
+            {
+                Light single_light;
+                single_light.light_color = light->GetColor().value_.xyz;
+                single_light.light_direction = node.second->GetForwardDir();
+                single_light.light_position = node.second->GetWorldPosition();
+                single_light.light_instensity = light->GetIntensity() / 200000.f;
+                single_light.falloff_begin = 800.f;
+                single_light.falloff_end = 5000.f;
+                single_light.is_able = 1.f;
+                switch (light->GetType())
+                {
+                case Engine::ELightType::kDirectional:
+                {
+                    single_light.type = 0;
+                }
+                    break;
+                case Engine::ELightType::kPoint:
+                {
+                    single_light.type = 1;
+                }
+                    break;
+                case Engine::ELightType::kSpot:
+                {
+                    single_light.type = 2;
+                    auto spot_light = std::dynamic_pointer_cast<SceneObjectSpotLight>(light);
+                    single_light.inner_angle = spot_light->inner_angle_;
+                    single_light.outer_angle = spot_light->outer_angle_;
+                }
+                    break;
+                default:
+                    break;
+                }
+                draw_frame_context_.lights_[i++] = single_light;
+            }
+        }
+    }
+    else
+    {
 
+    }
+    draw_frame_context_.ambient_color_ = kDefaultAmbientLight;
 }
 
 

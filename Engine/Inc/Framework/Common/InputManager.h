@@ -1,5 +1,6 @@
 #pragma once
 #include "Framework/Interface/IRuntimeModule.h"
+#include "GameLogic.h"
 #include <thread>
 
 
@@ -7,7 +8,7 @@ namespace Engine
 {
 	enum class EKeyButton
 	{
-		kW, kA, kS, kD
+		kW, kA, kS, kD,kArrowUp, kArrowDown, kArrowLeft, kArrowRight,
 	};
 	enum class EMoveType
 	{

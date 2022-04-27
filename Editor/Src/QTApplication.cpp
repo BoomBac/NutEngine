@@ -15,12 +15,13 @@ int QTApplication::Initialize()
 	p_editor_->show();
 	p_editor_->setWindowTitle(config_.window_name_);
 	handle_ = dynamic_cast<Editor*>(p_editor_)->GetViewportHandle();
+	BaseApplication::Initialize();
 	return 0;
 }
 
 void QTApplication::Finalize()
 {
-
+	BaseApplication::Finalize();
 }
 
 QTApplication::~QTApplication()
@@ -33,6 +34,7 @@ QTApplication::~QTApplication()
 void QTApplication::Tick()
 {
 	p_app_->processEvents();
+	BaseApplication::Tick();
 }
 
 void* QTApplication::GetMainWindowHandler()

@@ -78,6 +78,12 @@ namespace Engine
         kSceneObjectCollisionTypePlane
     };
 
+    enum class ELightType
+    {
+        kDirectional,
+        kPoint,
+        kSpot
+    };
 
     class BaseSceneObject
     {
@@ -380,7 +386,7 @@ namespace Engine
     {
     protected:
         // can only be used as base class of delivered lighting objects
-        SceneObjectLight() : BaseSceneObject(ESceneObjectType::kSceneObjectTypeLight) {};
+        SceneObjectLight(ELightType type) : type_(type), BaseSceneObject(ESceneObjectType::kSceneObjectTypeLight) {};
     protected:
         Color       light_color_;
         float       intensity_;
@@ -389,6 +395,7 @@ namespace Engine
         float       far_clip_distance_;
         bool        b_cast_shadows_;
         std::string texture_;
+        ELightType  type_;
     public:
         void SetIfCastShadow(bool shadow) { b_cast_shadows_ = shadow; };
         void SetColor(std::string& attrib, Vector4f& color)
@@ -413,23 +420,30 @@ namespace Engine
         {
             light_attenuation_ = func;
         }
-        const Color& GetColor() { return light_color_; };
+        Color GetColor() const { return light_color_; };
         float GetIntensity() { return intensity_; };
+        ELightType GetType() const {return type_;};
+        void SetType(ELightType type){type_ = type;}; 
+    };
+
+    class SceneObjectDirectonalLight : public SceneObjectLight
+    {
+    public:
+        SceneObjectDirectonalLight() : SceneObjectLight(ELightType::kDirectional) {}
     };
 
     class SceneObjectPointLight : public SceneObjectLight
     {
     public:
-        using SceneObjectLight::SceneObjectLight;
+        SceneObjectPointLight() : SceneObjectLight(ELightType::kPoint) {}
     };
 
     class SceneObjectSpotLight : public SceneObjectLight
     {
     public:
-        using SceneObjectLight::SceneObjectLight;
-    protected:
-        float   cone_angle_;
-        float   penumbra_angle_;
+        SceneObjectSpotLight() : SceneObjectLight(ELightType::kSpot) {}
+        float   inner_angle_;
+        float   outer_angle_;
     };
 
     class SceneObjectCamera : public BaseSceneObject

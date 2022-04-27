@@ -111,8 +111,10 @@
     <QtUic Include="editor.ui" />
     <QtMoc Include="editor.h" />
     <ClCompile Include="editor.cpp" />
+    <ClCompile Include="Game\Empty.cpp" />
     <ClCompile Include="log.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClInclude Include="Game\Empty.h" />
     <ClInclude Include="Inc\QTApplication.h" />
     <ClInclude Include="log.h" />
     <QtMoc Include="qviewport.h" />

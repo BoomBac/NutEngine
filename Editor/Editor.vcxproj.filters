@@ -33,6 +33,9 @@
     <Filter Include="Source Files\frame">
       <UniqueIdentifier>{8da5c0a0-796a-4746-bb85-da4f94de0c6f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Game">
+      <UniqueIdentifier>{5431d940-23c2-440a-9023-cd84e0ab634a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <QtRcc Include="editor.qrc">
@@ -64,6 +67,9 @@
     <ClCompile Include="Src\QTApplication.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Game\Empty.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="project_browser.ui">
@@ -79,6 +85,9 @@
     </ClInclude>
     <ClInclude Include="Inc\QTApplication.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\Empty.h">
+      <Filter>Game</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -69,7 +69,12 @@ void Editor::keyPressEvent(QKeyEvent* ev)
     {
         g_InputManager->ButtonDown(Engine::EKeyButton::kD);
     }
-        break;
+    break;
+    case Qt::Key::Key_Left:
+    {
+        g_InputManager->ButtonDown(Engine::EKeyButton::kArrowLeft);
+    }
+    break;
     default:
             break;
     }
@@ -97,6 +102,11 @@ void Editor::keyReleaseEvent(QKeyEvent* ev)
     case Qt::Key::Key_D:
     {
         g_InputManager->ButtonUp(Engine::EKeyButton::kD);
+    }
+    break;
+    case Qt::Key::Key_Left:
+    {
+        g_InputManager->ButtonUp(Engine::EKeyButton::kArrowLeft);
     }
     break;
     default:
