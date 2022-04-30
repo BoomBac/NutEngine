@@ -70,6 +70,12 @@
     <Filter Include="Src\Physics">
       <UniqueIdentifier>{7851ce02-4a08-4931-94c3-77ee511b70a8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Inc\Framework\DrawPass">
+      <UniqueIdentifier>{ec9abd5d-5254-4aed-a9dc-e1ad36d0eb2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Framework\DrawPass">
+      <UniqueIdentifier>{1cb042bc-07b9-4d95-ad6d-6d3e9bd7b09f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -201,6 +207,21 @@
     <ClInclude Include="Inc\Framework\Common\GameLogic.h">
       <Filter>Inc\Framework\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\GfxStructures.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Interface\IShaderManager.h">
+      <Filter>Inc\Framework\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Common\ShaderManager.h">
+      <Filter>Inc\Framework\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Interface\IDrawPass.h">
+      <Filter>Inc\Framework\Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\DrawPass\ForwardRenderPass.h">
+      <Filter>Inc\Framework\DrawPass</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -271,6 +292,9 @@
     </ClCompile>
     <ClCompile Include="Src\Framework\Common\GameLogic.cpp">
       <Filter>Src\Framework\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\DrawPass\ForwardRenderPass.cpp">
+      <Filter>Src\Framework\DrawPass</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

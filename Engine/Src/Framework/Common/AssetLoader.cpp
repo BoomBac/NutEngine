@@ -10,7 +10,9 @@ using namespace Engine;
 
 int Engine::AssetLoader::Initialize()
 {
-    return 0;
+    int ret = 0;
+    AddSearchPath("H:/Project_VS2019/NutEngine/Engine");
+    return ret;
 }
 
 void Engine::AssetLoader::Finalize()

@@ -20,14 +20,6 @@ namespace Engine
             float specular_power;
             float use_texture;
         };
-        struct DrawBatchContext
-        {
-            INT32 count;
-            INT32 vertex_buf_start_;
-            INT32 vertex_buf_len_;
-            std::shared_ptr<SceneGeometryNode> node;
-            std::shared_ptr<SceneObjectMaterial> material;
-        };
         struct DrawDebugBatchContext
         {
             INT32 count;
@@ -36,10 +28,15 @@ namespace Engine
             INT32 vertex_buf_id_;
         };
     public:
-        int Initialize() override;
-        void Finalize() override;
-        void Clear() override;
-        void Draw() override;
+        int Initialize() final;
+        void Finalize() final;
+        void Present() final;
+        void Draw() final;
+
+        void UseShaderProgram(const INT32 shaderProgram) final;
+
+        void DrawBatch(const std::vector<std::shared_ptr<DrawBatchContext>>& batches) final;
+
 #ifdef _DEBUG
         void DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color) override;
         void DrawBox(const Vector3f& bbMin, const Vector3f& bbMax, const Vector3f& color) override;
@@ -49,18 +46,18 @@ namespace Engine
         void InitializeBufferDebug();
         void InitializeShaderDebug();
 #endif
-    protected:
-        bool SetPerFrameShaderParameters();
-        bool SetPerBatchShaderParameters(int32_t index);
-
-        void UpdateConstants() override;
-        void InitializeBuffers(const Scene& scene) override;
-        void ClearBuffers() override;
-        bool InitializeShaders() override;
-        void ClearShaders() override;
-        void RenderBuffers() override;
 
     private:
+        void BeginScene(const Scene& scene) final;
+        void EndScene() final;
+
+        void BeginFrame() final;
+        void EndFrame() final;
+
+        HRESULT ResetCommandList();
+        HRESULT CreateCommandList();
+        HRESULT InitializePSO();
+
         HRESULT CreateDescriptorHeaps();
         HRESULT CreateRenderTarget();
         HRESULT CreateDepthStencil();
@@ -72,14 +69,19 @@ namespace Engine
         HRESULT CreateVertexBuffer(const SceneObjectVertexArray& vertex_array, bool b_debug = false);
         HRESULT CreateRootSignature();
         HRESULT WaitForPreviousFrame();
-        HRESULT PopulateCommandList();
+
+        virtual void SetPerFrameConstants(DrawFrameContext& context) final;
+        virtual void SetPerBatchConstants(std::vector<std::shared_ptr<DrawBatchContext>>& batches) final;
 
     private:
-        static constexpr uint32_t           kFrameCount = 2;
-        static constexpr uint32_t           kMaxSceneObjectCount = 65535;
-        static constexpr uint32_t           kMaxTextureCount = 2048;
+        struct D3dDrawBatchContext : public DrawBatchContext
+        {
+            INT32 count;
+            INT32 vertex_buf_start;
+            INT32 vertex_buf_len;
+        };
         static constexpr uint32_t		    kTextureDescStartIndex = kFrameCount * (1 + kMaxSceneObjectCount);
-        static constexpr FLOAT              kBackColor[] = { 0.3f, 0.3f, 0.3f, 1.0f };
+        static constexpr FLOAT              kBackColor[] = { 0.5f, 0.0f, 0.0f, 1.0f };
 
         
         ComPtr<ID3D12Device> p_device_ = nullptr;             // the pointer to our Direct3D device interface
@@ -108,8 +110,7 @@ namespace Engine
         std::vector<ComPtr<ID3D12Resource>>    buffers_;                          // the pointer to the vertex buffer
         std::vector<D3D12_VERTEX_BUFFER_VIEW>       vertex_buf_view_;                 // a view of the vertex buffer
         std::vector<D3D12_INDEX_BUFFER_VIEW>        index_buf_view_;                  // a view of the index buffer
-        std::vector<PerBatchConstants> draw_batch_constants_;
-        std::vector<DrawBatchContext> draw_batch_contexts_;
+
         std::vector<ComPtr<ID3D12Resource>> textures_;
         std::map<std::string,INT32> texture_index_;
 #ifdef _DEBUG
@@ -129,9 +130,8 @@ namespace Engine
         static constexpr size_t				kSizePerFrameConstantBuffer = (sizeof(DrawFrameContext) + 255) & ~255; // CB size is required to be 256-byte aligned.
         static constexpr size_t				kSizeConstantBufferPerFrame = kSizePerFrameConstantBuffer + kSizePerBatchConstantBuffer * kMaxSceneObjectCount;
         // Synchronization objects
-        uint32_t                        cur_back_buf_index_;
         HANDLE                          fence_event_;
-        ComPtr<ID3D12Fence> p_fence_ = nullptr;
+        ComPtr<ID3D12Fence> p_fence_    = nullptr;
         uint32_t                        fence_value_;
     };
 }

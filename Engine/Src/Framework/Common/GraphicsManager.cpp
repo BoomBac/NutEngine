@@ -4,6 +4,7 @@
 #include "Framework/Common/GfxConfiguration.h"
 #include "Framework/Interface/IApplication.h"
 #include "Framework/Common/Log.h"
+#include "Framework/DrawPass/ForwardRenderPass.h"
 
 
 using namespace Engine;
@@ -12,7 +13,9 @@ using namespace Engine;
 int Engine::GraphicsManager::Initialize()
 {
     int result = 0;
+    frames_.resize(kFrameCount);
     InitConstants();
+    draw_passes_.emplace_back(std::make_shared<ForwardRenderPass>());
     p_cam_mgr_ = std::make_unique<CameraManager>();
     return result;
 }
@@ -22,44 +25,58 @@ void Engine::GraphicsManager::Finalize()
 #ifdef _DEBUG
     ClearDebugBuffers();
 #endif // _DEBUG
-    ClearBuffers();
-    ClearShaders();
+    EndScene();
 }
 
 void Engine::GraphicsManager::Tick()
 {
     if (g_pSceneManager->IsSceneChanged())
     {
+        //EndScene();
         NE_LOG(ALL,kWarning,"[GraphicsManager] Detected Scene Change, reinitialize buffers ...")
-        ClearBuffers();
-        ClearShaders();
         auto& scene = g_pSceneManager->GetSceneForRendering();
-        InitializeShaders();
-        InitializeBuffers(scene);
+        BeginScene(scene);
         g_pSceneManager->NotifySceneIsRenderingQueued();
     }
-    Clear();
+    UpdateConstants();
+
+    BeginFrame();
     Draw();
+    EndFrame();
+
+    Present();
 }
 
-void Engine::GraphicsManager::Clear()
-{
-
-}
 
 void Engine::GraphicsManager::Draw()
 {
-    UpdateConstants();
-    RenderBuffers();
-#ifdef _DEBUG
-    RenderDebugBuffers();
-#endif //_DEBUG
+    auto& frame = frames_[0];
+    for(auto p_pass : draw_passes_)
+    {
+        p_pass->Draw(frame);
+    }    
+//#ifdef _DEBUG
+//    RenderDebugBuffers();
+//#endif //_DEBUG
+}
+void Engine::GraphicsManager::Present()
+{
+}
+void Engine::GraphicsManager::UseShaderProgram(const INT32 shaderProgram)
+{
+}
+void Engine::GraphicsManager::SetPerFrameConstants(DrawFrameContext& context)
+{
+}
+void Engine::GraphicsManager::SetPerBatchConstants(std::vector<std::shared_ptr<DrawBatchContext>>& batches)
+{
+}
+void Engine::GraphicsManager::DrawBatch(const std::vector<std::shared_ptr<DrawBatchContext>>& batches)
+{
+
 }
 void Engine::GraphicsManager::WorldRotateY(float radius)
 {
-    Matrix4x4f m;
-    MatrixRotationZ(m,radius);
-    draw_frame_context_.world_matrix_ = draw_frame_context_.world_matrix_ * m;
 }
 void Engine::GraphicsManager::MoveCameraForward(float distance)
 {
@@ -93,35 +110,33 @@ void Engine::GraphicsManager::ClearDebugBuffers()
 #endif
 
 
-bool Engine::GraphicsManager::InitializeShaders()
+void Engine::GraphicsManager::BeginScene(const Scene& scene)
 {
-    NE_LOG(ALL, kNormal, "[GraphicsManager] GraphicsManager::InitializeShaders()")
-    return true;
+    NE_LOG(ALL, kNormal, "[GraphicsManager] GraphicsManager::BeginScene()")
 }
 
-void Engine::GraphicsManager::ClearShaders()
+void Engine::GraphicsManager::EndScene()
 {
-    NE_LOG(ALL, kNormal, "[GraphicsManager] GraphicsManager::ClearShaders()")
+    NE_LOG(ALL, kNormal, "[GraphicsManager] GraphicsManager::EndScene()")
 }
 
-void Engine::GraphicsManager::InitializeBuffers(const Scene& scene)
+void Engine::GraphicsManager::BeginFrame()
 {
-    NE_LOG(ALL, kNormal, "[GraphicsManager] GraphicsManager::InitializeBuffers()")
 }
 
-void Engine::GraphicsManager::ClearBuffers()
+void Engine::GraphicsManager::EndFrame()
 {
-    NE_LOG(ALL, kNormal, "[GraphicsManager] GraphicsManager::ClearBuffers()")
 }
 
 
 void Engine::GraphicsManager::InitConstants()
 {
-    BuildIdentityMatrix(draw_frame_context_.world_matrix_);
+    BuildIdentityMatrix(frames_[frame_index_].frame_context.world_matrix_);
 }
 
 void Engine::GraphicsManager::CalculateCameraMatrix()
 {
+    auto& draw_frame_context_ = frames_[frame_index_].frame_context;
     const GfxConfiguration& conf = g_pApp->GetConfiguration();
     auto aspect = static_cast<float>(conf.viewport_width_) / static_cast<float>(conf.viewport_height_);
     //lenth is cm			
@@ -133,6 +148,7 @@ void Engine::GraphicsManager::CalculateCameraMatrix()
 
 void Engine::GraphicsManager::CalculateLights()
 {
+    auto& draw_frame_context_ = frames_[frame_index_].frame_context;
     auto& scene = g_pSceneManager->GetSceneForRendering();
     if(scene.GetFirstLightNode())
     {
@@ -184,15 +200,13 @@ void Engine::GraphicsManager::CalculateLights()
 }
 
 
-void Engine::GraphicsManager::RenderBuffers()
-{
-    //NE_LOG(ALL, kNormal, "[GraphicsManager] GraphicsManager::RenderBuffers()")
-}
-
 void Engine::GraphicsManager::UpdateConstants()
 {
+    auto& frame = frames_[frame_index_];
     CalculateCameraMatrix();
     CalculateLights();
+    SetPerFrameConstants(frame.frame_context);
+    SetPerBatchConstants(frame.batch_contexts);
 }
 
 void Engine::GraphicsManager::RenderDebugBuffers()

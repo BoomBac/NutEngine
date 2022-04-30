@@ -65,21 +65,106 @@ namespace Engine
 		delete[] color_data_debug_;
 		delete[] vertex_data_debug_;
 	}
-	void D3d12GraphicsManager::Clear()
+
+	void D3d12GraphicsManager::Present()
 	{
-		GraphicsManager::Clear();
+		HRESULT hr;
+		// execute the command list
+		ID3D12CommandList* ppCommandLists[] = { p_cmdlist_.Get() };
+		p_cmdqueue_->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+		// swap the back buffer and the front buffer
+		hr = p_swapchain->Present(1, 0);
+		WaitForPreviousFrame();
 	}
+
 	void D3d12GraphicsManager::Draw()
 	{
-		//temp draw axis
-		DrawLine(kOrigin,kForward,Colors::kBlue);
-		DrawLine(kOrigin,kUp,Colors::kGreen);
-		DrawLine(kOrigin,kRight,Colors::kRed);
-		PopulateCommandList();
 		GraphicsManager::Draw();
-		WaitForPreviousFrame();
 		//clear debug vertex data
-		ClearVertexData();
+		//ClearVertexData();
+	}
+	void D3d12GraphicsManager::UseShaderProgram(const INT32 shaderProgram)
+	{
+	}
+	void D3d12GraphicsManager::SetPerFrameConstants(DrawFrameContext& context)
+	{
+		UINT8* p_head = p_cbv_data_begin_ + frame_index_ * kSizeConstantBufferPerFrame;
+		size_t offset = reinterpret_cast<UINT8*>(&context.lights_) - reinterpret_cast<UINT8*>(&context);
+		memcpy(p_head, &context, offset);
+		p_head += offset;
+		int i = 0;
+		for (auto& light : context.lights_)
+		{
+			size_t size = ALIGN(sizeof(Light), 16);
+			memcpy(p_head, &context.lights_[i++], size);
+			p_head += size;
+		}
+	}
+	void D3d12GraphicsManager::SetPerBatchConstants(std::vector<std::shared_ptr<DrawBatchContext>>& batches)
+	{
+		PerBatchConstants pbc{};
+		memset(&pbc, 0x00, sizeof(PerBatchConstants));
+		for(auto& p_dbc : batches)
+		{
+			pbc.object_matrix = Transpose(*p_dbc->node->GetCalculatedTransform());
+			pbc.normal_matrix = MatrixInversetranspose(pbc.object_matrix);
+			auto mat = p_dbc->material;
+			if (mat)
+			{
+				Color color = mat->GetBaseColor();
+				if (color.value_map_)
+				{
+					pbc.base_color = Vector4f(0.f);
+					pbc.use_texture = 1.f;
+				}
+				else
+				{
+					pbc.base_color = color.value_;
+					pbc.use_texture = 0.f;
+				}
+				color = mat->GetSpecularColor();
+				if (color.value_map_) pbc.specular_color = Vector4f(0.f);
+				else pbc.specular_color = color.value_;
+				Parameter param = mat->GetSpecularPower();
+				pbc.specular_power = param.value_;
+			}
+			else
+			{
+				pbc.base_color = Vector4f(1.f);
+				pbc.use_texture = 0.f;
+				pbc.specular_color = pbc.base_color;
+			}
+			uint32_t offset = frame_index_ * kSizeConstantBufferPerFrame + kSizePerFrameConstantBuffer + p_dbc->batch_index
+				* kSizePerBatchConstantBuffer;
+			memcpy(p_cbv_data_begin_ + offset, &pbc, sizeof(PerBatchConstants));
+		}
+	}
+	void D3d12GraphicsManager::DrawBatch(const std::vector<std::shared_ptr<DrawBatchContext>>& batches)
+	{
+		D3D12_GPU_DESCRIPTOR_HANDLE cbv_handle[2];
+		uint32_t frame_res_desc_offset = frame_index_ * (1 + kMaxSceneObjectCount);
+		//offset to batch's pos in constant buf
+		cbv_handle[0].ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + frame_res_desc_offset * cbv_srv_uav_desc_size_;
+		for(const auto& p_dbc : batches)
+		{
+			const D3dDrawBatchContext& dbc = dynamic_cast<D3dDrawBatchContext&>(*p_dbc);
+			cbv_handle[1].ptr = cbv_handle[0].ptr + cbv_srv_uav_desc_size_ * (dbc.batch_index + 1);
+			p_cmdlist_->SetGraphicsRootDescriptorTable(1, cbv_handle[1]);
+			p_cmdlist_->SetPipelineState(p_plstate_.Get());
+			p_cmdlist_->IASetVertexBuffers(0, dbc.vertex_buf_len, &vertex_buf_view_[dbc.vertex_buf_start]);
+			//bind texture
+			if (dbc.material)
+			{
+				if (auto texture = dbc.material->GetBaseColor().value_map_)
+				{
+					auto texture_index = texture_index_[texture->GetName()];
+					D3D12_GPU_DESCRIPTOR_HANDLE srvHandle;
+					srvHandle.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_index) * cbv_srv_uav_desc_size_;
+					p_cmdlist_->SetGraphicsRootDescriptorTable(2, srvHandle);
+				}
+			}
+			p_cmdlist_->DrawInstanced(dbc.count, 1, 0, 0);
+		}
 	}
 #ifdef _DEBUG
 	void D3d12GraphicsManager::DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color)
@@ -263,76 +348,10 @@ namespace Engine
 		p_device_->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&p_plstate_debug_));
 	}
 #endif
-	bool D3d12GraphicsManager::SetPerFrameShaderParameters()
-	{
-		UINT8* p_head = p_cbv_data_begin_ + cur_back_buf_index_ * kSizeConstantBufferPerFrame;
-		size_t offset = reinterpret_cast<UINT8*>(&draw_frame_context_.lights_) - reinterpret_cast<UINT8*>(&draw_frame_context_);
-		memcpy(p_head, &draw_frame_context_, offset);
-		p_head += offset;
-		int i = 0;
-		for(auto& light : draw_frame_context_.lights_)
-		{
-			size_t size = ALIGN(sizeof(Light), 16);
-			memcpy(p_head, &draw_frame_context_.lights_[i++], size);
-			p_head += size;
-		}
-		return true;
-	}
-	bool D3d12GraphicsManager::SetPerBatchShaderParameters(int32_t index)
-	{
-		PerBatchConstants pbc{};
-		memset(&pbc,0x00,sizeof(PerBatchConstants));
-		pbc.object_matrix = Transpose(*draw_batch_contexts_[index].node->GetCalculatedTransform());
-		pbc.normal_matrix = MatrixInversetranspose(pbc.object_matrix);
-		auto mat = draw_batch_contexts_[index].material;
-		if(mat)
-		{
-			Color color = mat->GetBaseColor();
-			if(color.value_map_)
-			{
-				pbc.base_color = Vector4f(0.f);
-				pbc.use_texture = 1.f;
-			}
-			else 
-			{
-				pbc.base_color = color.value_;
-				pbc.use_texture = 0.f;
-			}
-			color = mat->GetSpecularColor();
-			if (color.value_map_) pbc.specular_color = Vector4f(0.f);
-			else pbc.specular_color = color.value_;
-			Parameter param = mat->GetSpecularPower();
-			pbc.specular_power = param.value_;
-		}
-		else
-		{
-			pbc.base_color = Vector4f(1.f);
-			pbc.use_texture = 0.f;
-			pbc.specular_color = pbc.base_color;
-		}
-		uint32_t offset = cur_back_buf_index_ * kSizeConstantBufferPerFrame + kSizePerFrameConstantBuffer + index * kSizePerBatchConstantBuffer;
-		memcpy(p_cbv_data_begin_ + offset,&pbc, sizeof(PerBatchConstants));
-		return true;
-	}
-	void D3d12GraphicsManager::UpdateConstants()
-	{
-		GraphicsManager::UpdateConstants();
-		SetPerFrameShaderParameters();
-		int i = 0;
-		for(auto dbc : draw_batch_contexts_)
-			SetPerBatchShaderParameters(i++);
-	}
-	void D3d12GraphicsManager::InitializeBuffers(const Scene& scene)
-	{
-		HRESULT hr = S_OK;
-		NE_LOG(ALL,kNormal,"CreateConstantBuffer...")
-		ThrowIfFailed(hr = CreateConstantBuffer());
-		NE_LOG(ALL, kNormal, "Done")
 
-		NE_LOG(ALL, kNormal, "CreateSamplerBuffer...")
-		ThrowIfFailed(hr = CreateSamplerBuffer());
-		NE_LOG(ALL, kNormal, "Done")
-
+	void D3d12GraphicsManager::BeginScene(const Scene& scene)
+	{
+		GraphicsManager::BeginScene(scene);
 		for (auto& _it : scene.Materials)
 		{
 			auto material = _it.second;
@@ -340,10 +359,12 @@ namespace Engine
 			{
 				auto color = material->GetBaseColor();
 				if (auto& texture = color.value_map_)
-					ThrowIfFailed(hr = CreateTextureBuffer(*texture));
+					ThrowIfFailed(CreateTextureBuffer(*texture));
 			}
 		}
-		for(auto& it : scene.GeometryNodes)
+		NE_LOG(ALL,kNormal,"Create draw batch context...")
+		int draw_batch_index = 0;
+		for (auto& it : scene.GeometryNodes)
 		{
 			auto pGeometryNode = it.second;
 			if (pGeometryNode->Visible())
@@ -365,51 +386,114 @@ namespace Engine
 				}
 				if (vertex_count != 0)
 				{
-					DrawBatchContext dbc{};
-					dbc.count = vertex_count;
-					dbc.node = pGeometryNode;
+					auto dbc = std::make_shared<D3dDrawBatchContext>();
+					dbc->count = vertex_count;
+					dbc->node = pGeometryNode;
+					dbc->batch_index = draw_batch_index;
+					dbc->vertex_buf_len = vertexPropertiesCount;
+					dbc->vertex_buf_start = vertex_buf_view_.size() - vertexPropertiesCount;
 					//TODO:vertex has multi material slot
 					auto mat = scene.GetMaterial(pGeometryNode->GetMaterialRef(0));
-					if (mat)	dbc.material = mat;
-					draw_batch_contexts_.push_back(std::move(dbc));
-					draw_batch_contexts_.back().vertex_buf_len_ = vertexPropertiesCount;
-					draw_batch_contexts_.back().vertex_buf_start_ = vertex_buf_view_.size() - vertexPropertiesCount;
+					if (mat)	dbc->material = mat;
+					frames_[frame_index_].batch_contexts.emplace_back(dbc);
+					++draw_batch_index;
 				}
 			}
 		}
-		if (SUCCEEDED(hr = p_cmdlist_->Close())) 
+		NE_LOG(ALL, kNormal, "Done")
+		if (SUCCEEDED(p_cmdlist_->Close()))
 		{
 			ID3D12CommandList* ppCommandLists[] = { p_cmdlist_.Get() };
 			p_cmdqueue_->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 			ThrowIfFailed(p_device_->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(p_fence_.GetAddressOf())));
 			fence_value_ = 1;
 			fence_event_ = CreateEvent(NULL, FALSE, FALSE, NULL);
-			if (fence_event_ == NULL) 
+			if (fence_event_ == NULL)
 			{
-				ThrowIfFailed(hr = HRESULT_FROM_WIN32(GetLastError()));
+				ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
 			}
 			WaitForPreviousFrame();
 		}
 	}
 
-	void D3d12GraphicsManager::ClearBuffers()
+	void D3d12GraphicsManager::EndScene()
 	{
 		p_fence_.Reset();
-		for(auto p : buffers_)
+		for (auto p : buffers_)
 			p.Reset();
 		buffers_.clear();
-		for(auto p : textures_)
+		for (auto p : textures_)
 			p.Reset();
 		textures_.clear();
-		vertex_buf_view_.clear();         
-		index_buf_view_.clear();          
-		draw_batch_constants_.clear();
-		draw_batch_contexts_.clear();
+		vertex_buf_view_.clear();
+		index_buf_view_.clear();
 		textures_.clear();
 		texture_index_.clear();
+		for (int i = 0; i < 2; ++i)
+		{
+			auto& batch_context = frames_[i].batch_contexts;
+			batch_context.clear();
+		}
 	}
 
-	bool D3d12GraphicsManager::InitializeShaders()
+	void D3d12GraphicsManager::BeginFrame()
+	{
+		ResetCommandList();
+		// Indicate that the back buffer will be used as a render target.
+		auto barrier_back_buffer = CD3DX12_RESOURCE_BARRIER::Transition(render_target_arr_[frame_index_].Get(),
+			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		p_cmdlist_->ResourceBarrier(1, &barrier_back_buffer);
+		//TODO:Using the depth stencil buffer
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(p_rtv_heap_->GetCPUDescriptorHandleForHeapStart(), frame_index_, rtv_desc_size_);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(p_dsv_heap_->GetCPUDescriptorHandleForHeapStart());
+		p_cmdlist_->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+		// clear the back buffer to a deep blue
+		p_cmdlist_->ClearRenderTargetView(rtvHandle, kBackColor, 0, nullptr);
+		p_cmdlist_->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+		//Set necessary state
+		p_cmdlist_->SetGraphicsRootSignature(p_rootsig_.Get());
+		ID3D12DescriptorHeap* ppHeaps[] = { p_cbv_heap_.Get(),p_sampler_heap_.Get() };
+		p_cmdlist_->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		p_cmdlist_->SetGraphicsRootDescriptorTable(3, p_sampler_heap_->GetGPUDescriptorHandleForHeapStart());
+
+		p_cmdlist_->RSSetViewports(1, &vp_);
+		p_cmdlist_->RSSetScissorRects(1, &rect_);
+		p_cmdlist_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		//set cbv for per frame
+		D3D12_GPU_DESCRIPTOR_HANDLE cbv_handle;
+		uint32_t frame_res_desc_offset = frame_index_ * (1 + kMaxSceneObjectCount);
+		cbv_handle.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + frame_res_desc_offset * cbv_srv_uav_desc_size_;
+		p_cmdlist_->SetGraphicsRootDescriptorTable(0, cbv_handle);
+	}
+
+	void D3d12GraphicsManager::EndFrame()
+	{
+		auto res_barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_target_arr_[frame_index_].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET,
+			D3D12_RESOURCE_STATE_PRESENT);
+		p_cmdlist_->ResourceBarrier(1, &res_barrier);
+		p_cmdlist_->Close();
+	}
+
+	HRESULT D3d12GraphicsManager::ResetCommandList()
+	{
+		HRESULT hr = S_OK;
+		if (FAILED(hr = p_cmdalloc_->Reset())) return hr;
+		if (FAILED(hr = p_cmdlist_->Reset(p_cmdalloc_.Get(), p_plstate_.Get()))) return hr;
+		return hr;
+	}
+
+	HRESULT D3d12GraphicsManager::CreateCommandList()
+	{
+		HRESULT hr = S_OK;
+		if(p_cmdlist_== nullptr)
+		{
+			hr = p_device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, p_cmdalloc_.Get(),
+				p_plstate_.Get(), IID_PPV_ARGS(&p_cmdlist_));
+		}
+		return hr;
+	}
+
+	HRESULT D3d12GraphicsManager::InitializePSO()
 	{
 		HRESULT hr = S_OK;
 		// load the shaders
@@ -452,28 +536,12 @@ namespace Engine
 		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		psoDesc.SampleDesc.Count = 1;
 		if (FAILED(hr = p_device_->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&p_plstate_)))) return hr;
-		hr = p_device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, p_cmdalloc_.Get(),
-			p_plstate_.Get(), IID_PPV_ARGS(&p_cmdlist_));
-#ifdef _DEBUG
-		InitializeShaderDebug();
-#endif // _DEBUG
-
+//#ifdef _DEBUG
+//		InitializeShaderDebug();
+//#endif // _DEBUG
+		return hr;
 	}
 
-	void D3d12GraphicsManager::ClearShaders()
-	{
-		p_cmdlist_.Reset();
-		p_plstate_.Reset();
-	}
-	void D3d12GraphicsManager::RenderBuffers()
-	{
-		HRESULT hr;
-		// execute the command list
-		ID3D12CommandList* ppCommandLists[] = { p_cmdlist_.Get() };
-		p_cmdqueue_->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-		// swap the back buffer and the front buffer
-		hr = p_swapchain->Present(1, 0);
-	}
 	HRESULT D3d12GraphicsManager::CreateDescriptorHeaps()
 	{
 		HRESULT hr;
@@ -619,79 +687,10 @@ namespace Engine
 			if (FAILED(hr = p_fence_->SetEventOnCompletion(fence, fence_event_))) return hr;
 			WaitForSingleObject(fence_event_, INFINITE);
 		}
-		cur_back_buf_index_ = p_swapchain->GetCurrentBackBufferIndex();
+		frame_index_ = p_swapchain->GetCurrentBackBufferIndex();
 		return hr;
 	}
-	HRESULT D3d12GraphicsManager::PopulateCommandList()
-	{
-		HRESULT hr = S_OK;
-		//clear something
-		{
-			if (FAILED(hr = p_cmdalloc_->Reset())) return hr;
-			if (FAILED(hr = p_cmdlist_->Reset(p_cmdalloc_.Get(), p_plstate_.Get()))) return hr;
-			// Indicate that the back buffer will be used as a render target.
-			auto barrier_back_buffer = CD3DX12_RESOURCE_BARRIER::Transition(render_target_arr_[cur_back_buf_index_].Get(),
-				D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-			p_cmdlist_->ResourceBarrier(1, &barrier_back_buffer);
-			//TODO:Using the depth stencil buffer
-			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(p_rtv_heap_->GetCPUDescriptorHandleForHeapStart(), cur_back_buf_index_, rtv_desc_size_);
-			CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(p_dsv_heap_->GetCPUDescriptorHandleForHeapStart());
-			p_cmdlist_->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
-			// clear the back buffer to a deep blue
-			p_cmdlist_->ClearRenderTargetView(rtvHandle, kBackColor, 0, nullptr);
-			p_cmdlist_->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-		}
-		//Set necessary state
-		p_cmdlist_->SetGraphicsRootSignature(p_rootsig_.Get());
 
-		ID3D12DescriptorHeap* ppHeaps[] = { p_cbv_heap_.Get(),p_sampler_heap_.Get() };
-		p_cmdlist_->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
-		p_cmdlist_->SetGraphicsRootDescriptorTable(3, p_sampler_heap_->GetGPUDescriptorHandleForHeapStart());
-
-		p_cmdlist_->RSSetViewports(1, &vp_);
-		p_cmdlist_->RSSetScissorRects(1, &rect_);
-		p_cmdlist_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		p_cmdlist_->SetPipelineState(p_plstate_.Get());
-
-		D3D12_GPU_DESCRIPTOR_HANDLE cbv_handle[2];
-		uint32_t frame_res_desc_offset = cur_back_buf_index_ * (1 + kMaxSceneObjectCount);
-		cbv_handle[0].ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + frame_res_desc_offset * cbv_srv_uav_desc_size_;
-		p_cmdlist_->SetGraphicsRootDescriptorTable(0, cbv_handle[0]);
-
-		for(uint32_t i = 0; i < draw_batch_contexts_.size(); i++) 
-		{
-			cbv_handle[1].ptr = cbv_handle[0].ptr + cbv_srv_uav_desc_size_ * (i + 1);
-			p_cmdlist_->SetGraphicsRootDescriptorTable(1, cbv_handle[1]);
-			p_cmdlist_->IASetVertexBuffers(0, draw_batch_contexts_[i].vertex_buf_len_, &vertex_buf_view_[draw_batch_contexts_[i].vertex_buf_start_]);
-			//bind texture
-			if(draw_batch_contexts_[i].material)
-			{
-				if(auto texture = draw_batch_contexts_[i].material->GetBaseColor().value_map_)
-				{
-					auto texture_index = texture_index_[texture->GetName()];
-					D3D12_GPU_DESCRIPTOR_HANDLE srvHandle;
-					srvHandle.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_index) * cbv_srv_uav_desc_size_;
-					p_cmdlist_->SetGraphicsRootDescriptorTable(2, srvHandle);
-				}
-			}
-			p_cmdlist_->DrawInstanced(draw_batch_contexts_[i].count,1,0,0);
-		}
-#ifdef _DEBUG
-		p_cmdlist_->SetPipelineState(p_plstate_debug_.Get());
-		p_cmdlist_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
-		for (uint32_t i = 0; i < draw_batch_contexts_debug_.size(); i++)
-		{
-			auto context = draw_batch_contexts_debug_[i];
-			p_cmdlist_->IASetVertexBuffers(0, 2, &vertex_buf_view_debug_[i]);
-			p_cmdlist_->DrawInstanced(context.count, 1, 0, 0);
-		}
-#endif // _DEBUG
-		auto res_barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_target_arr_[cur_back_buf_index_].Get(),D3D12_RESOURCE_STATE_RENDER_TARGET, 
-			D3D12_RESOURCE_STATE_PRESENT);
-		p_cmdlist_->ResourceBarrier(1, &res_barrier);
-		return hr = p_cmdlist_->Close();
-	}
 	HRESULT D3d12GraphicsManager::CreateGraphicsResources()
 	{
 		HRESULT hr;
@@ -736,23 +735,40 @@ namespace Engine
 		// Swap chain needs the queue so that it can force a flush on it.
 		hr = factory->CreateSwapChain(p_cmdqueue_.Get(), &scd, swapChain.GetAddressOf());
 		ThrowIfFailed(hr = swapChain.As(&p_swapchain));
-		cur_back_buf_index_ = p_swapchain->GetCurrentBackBufferIndex();
+		frame_index_ = p_swapchain->GetCurrentBackBufferIndex();
 
 		NE_LOG(ALL,kWarning,"CreateDescriptorHeaps...")
-		if (FAILED(hr = CreateDescriptorHeaps())) return hr; //2
+		if (FAILED(hr = CreateDescriptorHeaps())) return hr;
 		NE_LOG(ALL, kWarning, "Done!")
 
 		NE_LOG(ALL, kWarning, "CreateRenderTarget...")
-		if (FAILED(hr = CreateRenderTarget())) return hr; //2
+		if (FAILED(hr = CreateRenderTarget())) return hr;
 		NE_LOG(ALL, kWarning, "Done!")
 
 		NE_LOG(ALL, kWarning, "CreateDepthStencil...")
-		if (FAILED(hr = CreateDepthStencil())) return hr; //2
+		if (FAILED(hr = CreateDepthStencil())) return hr;
 		NE_LOG(ALL, kWarning, "Done!")
 
 		NE_LOG(ALL, kWarning, "CreateRootSignature...")
 		if (FAILED(hr = CreateRootSignature())) return hr;
 		NE_LOG(ALL, kWarning, "Done!")
+
+		NE_LOG(ALL, kWarning, "InitializePSO...")
+		if (FAILED(hr = InitializePSO())) return hr;
+		NE_LOG(ALL, kWarning, "Done!")
+
+		NE_LOG(ALL, kWarning, "CreateCommandList...")
+		if (FAILED(hr = CreateCommandList())) return hr;
+		NE_LOG(ALL, kWarning, "Done!")
+
+		NE_LOG(ALL, kWarning, "CreateConstantBuffer...")
+		ThrowIfFailed(hr = CreateConstantBuffer());
+		NE_LOG(ALL, kWarning, "Done")
+
+		NE_LOG(ALL, kWarning, "CreateSamplerBuffer...")
+		ThrowIfFailed(hr = CreateSamplerBuffer());
+		NE_LOG(ALL, kWarning, "Done")
+
 		return hr;
 	}
 	HRESULT D3d12GraphicsManager::CreateSamplerBuffer()

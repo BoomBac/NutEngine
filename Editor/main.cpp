@@ -43,7 +43,6 @@ int main(int argc, char *argv[])
     int error = 0;
     error += g_pLogManager->Initialize();
     error += g_pApp->Initialize();
-    g_pAssetLoader->AddSearchPath("H:/Project_VS2019/NutEngine/Engine");
     g_pSceneManager->LoadScene();
     assert(error==0);
     NE_LOG(ALL, kWarning, "Editor launch")

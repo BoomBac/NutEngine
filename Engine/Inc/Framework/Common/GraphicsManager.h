@@ -3,6 +3,7 @@
 #include "SceneManager.h"
 #include "Framework/Math/NutMath.hpp"
 #include "Framework/Common/CameraManager.h"
+#include "../Interface/IDrawPass.h"
 
 
 namespace Engine 
@@ -14,8 +15,12 @@ namespace Engine
 		virtual int Initialize();
 		virtual void Finalize();
 		virtual void Tick();
-		virtual void Clear();
 		virtual void Draw();
+		virtual void Present();
+
+		virtual void UseShaderProgram(const INT32 shaderProgram);
+		virtual void DrawBatch(const std::vector<std::shared_ptr<DrawBatchContext>>& batches);
+
 		//temp
 		void WorldRotateY(float radius);
 		void MoveCameraForward(float distance);
@@ -28,44 +33,31 @@ namespace Engine
 		virtual void ClearDebugBuffers();
 #endif
 	protected:
-		virtual bool InitializeShaders();
-		virtual void ClearShaders();
-		virtual void InitializeBuffers(const Scene& scene);
-		virtual void ClearBuffers();
+		virtual void BeginScene(const Scene& scene);
+		virtual void EndScene();
+
+		virtual void BeginFrame();
+		virtual void EndFrame();
 
 		virtual void InitConstants();
 		virtual void CalculateCameraMatrix();
 		virtual void CalculateLights();
-		virtual void RenderBuffers();
 		virtual void UpdateConstants();
+
+		virtual void SetPerFrameConstants(DrawFrameContext& context);
+		virtual void SetPerBatchConstants(std::vector<std::shared_ptr<DrawBatchContext>>& batches);
+
 #ifdef _DEBUG
 		virtual void RenderDebugBuffers();
 #endif
-	protected:
-		struct Light
-		{
-			Vector3f    light_position;
-			float		light_instensity;
-			Vector3f    light_direction;
-			float		inner_angle;
-			Vector3f    light_color;
-			float		outer_angle;
-			float		falloff_begin;
-			float		falloff_end;
-			int			type;
-			float		is_able;
-		};
-		struct DrawFrameContext 
-		{
-			Matrix4x4f  world_matrix_;
-			Matrix4x4f  view_matrix_;
-			Matrix4x4f  projection_matrix_;
-			Vector4f    ambient_color_;
-			Vector3f	camera_position_;
-			float		is_able;
-			Light lights_[32];
-		};
-		DrawFrameContext    draw_frame_context_;
+	protected:					
+		static constexpr uint32_t           kFrameCount = 2;
+		static constexpr uint32_t           kMaxSceneObjectCount = 65535;
+		static constexpr uint32_t           kMaxTextureCount = 2048;
+
+		UINT32 frame_index_ = 0;
+		std::vector<Frame> frames_;
+		std::vector<std::shared_ptr<IDrawPass>> draw_passes_;
 		//temp
 		std::unique_ptr<CameraManager> p_cam_mgr_;
 
@@ -75,7 +67,7 @@ namespace Engine
 		inline static const Vector3f			kUp = { 0.f,100000.f,0.f };
 
 		inline static const Vector4f			kDefaultLightColor = { 1.f,1.f,1.f,1.f};
-		inline static const Vector4f			kDefaultAmbientLight = { 0.2f,0.2f,0.2f,1.f};
+		inline static const Vector4f			kDefaultAmbientLight = { 0.0f,0.0f,0.0f,1.f};
 	};
 	extern GraphicsManager* g_pGraphicsManager;
 }
