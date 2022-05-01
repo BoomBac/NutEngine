@@ -19,7 +19,20 @@ namespace Engine
 		virtual void Present();
 
 		virtual void UseShaderProgram(const INT32 shaderProgram);
+
 		virtual void DrawBatch(const std::vector<std::shared_ptr<DrawBatchContext>>& batches);
+
+		virtual void DrawBatch(std::shared_ptr<DrawBatchContext> batch);
+
+
+		virtual void GenerateShadowMapArray(UINT32 count);
+		virtual void BeginShadowMap(int light_mat_index);
+		virtual void EndShadowMap(int light_index, bool final);
+		virtual void SetShadowMap(const intptr_t shadowmap);
+		virtual void DestroyShadowMap(intptr_t& shadowmap);
+
+		//temp just adjust view_matrix form light to camera
+		virtual void BeginRenderPass();
 
 		//temp
 		void WorldRotateY(float radius);
@@ -31,6 +44,8 @@ namespace Engine
 		virtual void DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color);
 		virtual void DrawBox(const Vector3f& bbMin, const Vector3f& bbMax, const Vector3f& color);
 		virtual void ClearDebugBuffers();
+
+		virtual void DrawOverlay();
 #endif
 	protected:
 		virtual void BeginScene(const Scene& scene);
@@ -54,6 +69,7 @@ namespace Engine
 		static constexpr uint32_t           kFrameCount = 2;
 		static constexpr uint32_t           kMaxSceneObjectCount = 65535;
 		static constexpr uint32_t           kMaxTextureCount = 2048;
+		static constexpr uint32_t           kMaxShadowMapCount = 16;
 
 		UINT32 frame_index_ = 0;
 		std::vector<Frame> frames_;
@@ -67,7 +83,7 @@ namespace Engine
 		inline static const Vector3f			kUp = { 0.f,100000.f,0.f };
 
 		inline static const Vector4f			kDefaultLightColor = { 1.f,1.f,1.f,1.f};
-		inline static const Vector4f			kDefaultAmbientLight = { 0.0f,0.0f,0.0f,1.f};
+		inline static const Vector4f			kDefaultAmbientLight = { 0.2f,0.2f,0.2f,1.f};
 	};
 	extern GraphicsManager* g_pGraphicsManager;
 }

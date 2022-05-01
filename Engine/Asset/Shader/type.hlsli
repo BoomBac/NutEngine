@@ -19,8 +19,7 @@ struct VSOutputDebug
 	float3 color : COLOR;
 };
 
-Texture2D g_texture : register(t0);
-SamplerState g_sampler : register(s0);
+
 
 
 #endif //__TYPE_H__

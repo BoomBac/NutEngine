@@ -200,7 +200,7 @@ namespace Engine
 		return (first + ... + arg);
 	}
 	template<template<typename> typename TT, typename T>
-	TT<T> operator-(TT<T>& v)
+	TT<T> operator-(TT<T> v)
 	{
 		for (uint32_t i = 0; i < CountOf(v.data); i++)
 		{
@@ -585,6 +585,20 @@ namespace Engine
 	{
 		MatrixInverse(mat);
 		return Transpose(mat);
+	}
+	// directx: left f > n > 0		NDC 0~1
+	static void BuildOrthographicMatrix(Matrix4x4f& matrix, const float left, const float right, const float top, const float bottom, const float near_plane, const float far_plane)
+	{
+		const float width = right - left;
+		const float height = top - bottom;
+		const float depth = far_plane - near_plane;
+		matrix = { {{
+			{ 2.0f / width, 0.0f, 0.0f, 0.0f },
+			{ 0.0f, 2.0f / height, 0.0f, 0.0f },
+			{ 0.0f, 0.0f, 1.0f / depth, 0.0f },
+			{ -(right + left) / width, -(top + bottom) / height, -near_plane / depth, 1.0f }
+			} }};
+		return;
 	}
 	static void BuildPerspectiveFovLHMatrix(Matrix4x4f& matrix, const float fieldOfView, const float screenAspect, const float screenNear, const float screenDepth)
 	{

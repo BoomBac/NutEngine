@@ -6,6 +6,7 @@ namespace Engine
 {
 	void ForwardRenderPass::Draw(Frame& frame)
 	{
+		g_pGraphicsManager->BeginRenderPass();
 		g_pGraphicsManager->DrawBatch(frame.batch_contexts);
 	}
 

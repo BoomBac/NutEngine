@@ -5,28 +5,32 @@
 
 namespace Engine
 {
+	constexpr int kMaxLightNum = 40;
 	struct Light
 	{
 		Vector3f    light_position;
-		float		light_instensity;
+		float		light_instensity;	//16
 		Vector3f    light_direction;
-		float		inner_angle;
+		float		inner_angle;		//32
 		Vector3f    light_color;
-		float		outer_angle;
-		float		falloff_begin;
+		float		outer_angle;		//48
+		float		falloff_begin;	
 		float		falloff_end;
 		int			type;
-		float		is_able;
+		int			shadow_map_index;	//64	
+		Matrix4x4f	vp_matrix_;
+		Light() : light_position(Vector3f{0.f,0.f,0.f}),light_instensity(0.f),light_direction(0.f,0.f,0.f),inner_angle(0.f),light_color(0.f,0.f,0.f),
+			outer_angle(0.f),falloff_begin(0.f),falloff_end(0.f),type(-1),shadow_map_index(-1){}
 	};
 	struct DrawFrameContext
 	{
 		Matrix4x4f  world_matrix_;
-		Matrix4x4f  view_matrix_;
+		Matrix4x4f  vp_matrix_;
 		Matrix4x4f  projection_matrix_;
 		Vector4f    ambient_color_;
 		Vector3f	camera_position_;
 		float		is_able;
-		Light lights_[32];
+		Light lights_[kMaxLightNum];
 	};
 	struct DrawBatchContext
 	{

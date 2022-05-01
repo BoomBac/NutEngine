@@ -4,6 +4,7 @@
 #include <array>
 #include "Framework/Common/GraphicsManager.h"
 #include "Framework/Common/SceneObject.h"
+#include "Framework/Common/Buffer.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -36,23 +37,38 @@ namespace Engine
         void UseShaderProgram(const INT32 shaderProgram) final;
 
         void DrawBatch(const std::vector<std::shared_ptr<DrawBatchContext>>& batches) final;
+        void DrawBatch(std::shared_ptr<DrawBatchContext> batch) final;
 
 #ifdef _DEBUG
-        void DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color) override;
-        void DrawBox(const Vector3f& bbMin, const Vector3f& bbMax, const Vector3f& color) override;
+        void DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color) final;
+        void DrawBox(const Vector3f& bbMin, const Vector3f& bbMax, const Vector3f& color) final;
+        void DrawOverlay();
     private:
-        void ClearDebugBuffers() override;
+        void ClearDebugBuffers() final;
         void ClearVertexData();
         void InitializeBufferDebug();
         void InitializeShaderDebug();
 #endif
 
+    enum class EBufferType
+    {
+        kNormal,kHUD
+    };
     private:
         void BeginScene(const Scene& scene) final;
         void EndScene() final;
 
         void BeginFrame() final;
         void EndFrame() final;
+
+        void GenerateShadowMapArray(UINT32 count = kMaxShadowMapCount);
+        void BeginShadowMap(int light_mat_index = 0) final;
+        void EndShadowMap(int light_index, bool final);
+        void SetShadowMap(const intptr_t shadowmap);
+        void DestroyShadowMap(intptr_t& shadowmap);
+
+        
+        void BeginRenderPass() final;
 
         HRESULT ResetCommandList();
         HRESULT CreateCommandList();
@@ -66,7 +82,7 @@ namespace Engine
         HRESULT CreateTextureBuffer(SceneObjectTexture& texture);
         HRESULT CreateConstantBuffer();
         HRESULT CreateIndexBuffer(const SceneObjectIndexArray& index_array);
-        HRESULT CreateVertexBuffer(const SceneObjectVertexArray& vertex_array, bool b_debug = false);
+        HRESULT CreateVertexBuffer(const SceneObjectVertexArray& vertex_array, EBufferType type = EBufferType::kNormal);
         HRESULT CreateRootSignature();
         HRESULT WaitForPreviousFrame();
 
@@ -83,6 +99,8 @@ namespace Engine
         static constexpr uint32_t		    kTextureDescStartIndex = kFrameCount * (1 + kMaxSceneObjectCount);
         static constexpr FLOAT              kBackColor[] = { 0.5f, 0.0f, 0.0f, 1.0f };
 
+        ComPtr<ID3D12Resource> p_shadow_map_ = nullptr;
+        ComPtr<ID3D12PipelineState> p_plstate_sm_ = nullptr;
         
         ComPtr<ID3D12Device> p_device_ = nullptr;             // the pointer to our Direct3D device interface
         D3D12_VIEWPORT                  vp_;                         // viewport structure
@@ -103,8 +121,12 @@ namespace Engine
         ComPtr<ID3D12GraphicsCommandList> p_cmdlist_ = nullptr;           // a list to store GPU commands, which will be submitted to GPU to execute when done
 
         uint32_t                        rtv_desc_size_;
+        uint32_t                        dsv_desc_size_;
         uint32_t                        cbv_srv_uav_desc_size_;
         uint32_t                        vertex_buf_per_frame_num_;
+
+        uint32_t                        shadow_map_start_;      //start pos of the shadow_map based on the srv handle
+        uint32_t                        shadow_map_buf_start_;      //start pos of the shadow_map based on the srv handle
 
         ComPtr<ID3D12Resource> p_vertex_buf_ = nullptr;          // the pointer to the vertex buffer
         std::vector<ComPtr<ID3D12Resource>>    buffers_;                          // the pointer to the vertex buffer
@@ -123,11 +145,15 @@ namespace Engine
         Vector3f* vertex_data_debug_ = nullptr;
         Vector3f* color_data_debug_ = nullptr;
         int cur_debug_vertex_pos = 0;
+
+        std::vector<ComPtr<ID3D12Resource>>    buffers_hud_;
+        std::vector<D3D12_VERTEX_BUFFER_VIEW>       vertex_buf_view_hud_;
+        ComPtr<ID3D12PipelineState> p_plstate_hud_= nullptr;
 #endif
         uint8_t* p_cbv_data_begin_ = nullptr;
-        // CB size is required to be 256-byte aligned.
-        static constexpr size_t				kSizePerBatchConstantBuffer = (sizeof(PerBatchConstants) + 255) & ~255;
-        static constexpr size_t				kSizePerFrameConstantBuffer = (sizeof(DrawFrameContext) + 255) & ~255; // CB size is required to be 256-byte aligned.
+        // CB size is required to be 256-byte aligned. make the size of DrawFrameContext and it's member 16bit align
+        static constexpr size_t				kSizePerBatchConstantBuffer = ALIGN(sizeof(PerBatchConstants),256);
+        static constexpr size_t				kSizePerFrameConstantBuffer =ALIGN(sizeof(DrawFrameContext),256); // CB size is required to be 256-byte aligned.
         static constexpr size_t				kSizeConstantBufferPerFrame = kSizePerFrameConstantBuffer + kSizePerBatchConstantBuffer * kMaxSceneObjectCount;
         // Synchronization objects
         HANDLE                          fence_event_;
