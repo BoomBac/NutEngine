@@ -7,20 +7,45 @@ namespace Engine
 	void ShadowMapPass::Draw(Frame& frame)
 	{
 		int index = 0;
+		int point_light_index = 0;
+		//if(!g_pGraphicsManager->REGenerateShadowMap()) 
+		//{
+		//	g_pGraphicsManager->SetShadowMap();
+		//	for (auto& light : frame.frame_context.lights_)
+		//		if (light.light_instensity > 0.f)
+		//			light.shadow_map_index = index++;
+		//	return;
+		//}
 		for(auto& light : frame.frame_context.lights_)
 		{
 			if(light.light_instensity > 0.f)
 			{
-				g_pGraphicsManager->BeginShadowMap(index);
-				for (auto batch : frame.batch_contexts)
+				if(light.type == 1)
 				{
-					g_pGraphicsManager->DrawBatch(batch);
+					for(int i = 0; i < 6; ++i)
+					{
+						g_pGraphicsManager->BeginShadowMap(light, index, point_light_index,i);
+						for (auto batch : frame.batch_contexts)
+						{
+							g_pGraphicsManager->DrawBatch(batch);
+						}
+						g_pGraphicsManager->EndShadowMap(index, point_light_index,true);
+					}
+					light.shadow_map_index = point_light_index++;
 				}
-				g_pGraphicsManager->EndShadowMap(index, false);
-				light.shadow_map_index = index++;
+				else
+				{
+					g_pGraphicsManager->BeginShadowMap(light, index);
+					for (auto batch : frame.batch_contexts)
+					{
+						g_pGraphicsManager->DrawBatch(batch);
+					}
+					g_pGraphicsManager->EndShadowMap(index);
+					light.shadow_map_index = index;
+				}
 			}
-
+			++index;
 		}
-		g_pGraphicsManager->EndShadowMap(index, true);
+		g_pGraphicsManager->EndShadowMap(0,0,false,true);
 	}
 }

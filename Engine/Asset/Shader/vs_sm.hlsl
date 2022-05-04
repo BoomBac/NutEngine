@@ -2,13 +2,16 @@
 #include "cbuffer.hlsli"
 
 
-float4 main(float3 position : POSITION) : SV_POSITION
+vs2_sm main(float3 position : POSITION)
 {
-	float4 ret;
-	float4x4 vp_matrix = mul(lights[g_light_mat_index].light_vp, g_projection_matrix_);
+	vs2_sm ret;
+	float4x4 vp_matrix;
 	float4x4 world_matrix = mul(g_world_matrix_, g_object_matrix_);
-	float4x4 mvp_matrix = mul(world_matrix, vp_matrix);
-	float3 world_pos = mul(float4(position, 1.f),world_matrix);
-	ret = mul(float4(world_pos, 1.f), lights[g_light_mat_index].light_vp);
+	ret.postionW = mul(float4(position, 1.f), world_matrix).xyz;
+	if (g_light_mat_index < 100)
+		vp_matrix = lights[g_light_mat_index].light_vp;
+	else
+		vp_matrix =g_point_light_mat[g_light_mat_index - 100];
+	ret.position = mul(float4(ret.postionW, 1.f), vp_matrix);
 	return ret;
 }

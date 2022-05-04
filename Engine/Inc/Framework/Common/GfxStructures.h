@@ -5,7 +5,8 @@
 
 namespace Engine
 {
-	constexpr int kMaxLightNum = 40;
+	constexpr int kMaxLightNum = 8;
+	constexpr int kMaxPointLightNum = 2;
 	struct Light
 	{
 		Vector3f    light_position;
@@ -16,7 +17,7 @@ namespace Engine
 		float		outer_angle;		//48
 		float		falloff_begin;	
 		float		falloff_end;
-		int			type;
+		int			type;	//0 dir 1 point 2 spot
 		int			shadow_map_index;	//64	
 		Matrix4x4f	vp_matrix_;
 		Light() : light_position(Vector3f{0.f,0.f,0.f}),light_instensity(0.f),light_direction(0.f,0.f,0.f),inner_angle(0.f),light_color(0.f,0.f,0.f),
@@ -29,7 +30,8 @@ namespace Engine
 		Matrix4x4f  projection_matrix_;
 		Vector4f    ambient_color_;
 		Vector3f	camera_position_;
-		float		is_able;
+		float		padding;
+		Matrix4x4f	point_light_vp_mat[kMaxPointLightNum * 6];
 		Light lights_[kMaxLightNum];
 	};
 	struct DrawBatchContext

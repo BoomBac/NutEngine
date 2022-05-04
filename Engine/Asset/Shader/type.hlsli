@@ -20,6 +20,10 @@ struct VSOutputDebug
 };
 
 
-
+struct vs2_sm
+{
+	float4 position : SV_POSITION;
+	float3 postionW : POSITIONT;
+};
 
 #endif //__TYPE_H__

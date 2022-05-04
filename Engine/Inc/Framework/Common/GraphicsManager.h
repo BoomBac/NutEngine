@@ -26,14 +26,16 @@ namespace Engine
 
 
 		virtual void GenerateShadowMapArray(UINT32 count);
-		virtual void BeginShadowMap(int light_mat_index);
-		virtual void EndShadowMap(int light_index, bool final);
-		virtual void SetShadowMap(const intptr_t shadowmap);
+		virtual void BeginShadowMap(Light& light, int light_id, int point_light_id = 0, int cube_map_id = 0);
+		virtual void EndShadowMap(int light_index, int point_light_id = 0, bool is_point_light = false, bool final = false);
+
+		virtual void SetShadowMap();
 		virtual void DestroyShadowMap(intptr_t& shadowmap);
 
 		//temp just adjust view_matrix form light to camera
 		virtual void BeginRenderPass();
 
+		bool REGenerateShadowMap() const {return b_regenerate_shadow_map_;}
 		//temp
 		void WorldRotateY(float radius);
 		void MoveCameraForward(float distance);
@@ -69,7 +71,8 @@ namespace Engine
 		static constexpr uint32_t           kFrameCount = 2;
 		static constexpr uint32_t           kMaxSceneObjectCount = 65535;
 		static constexpr uint32_t           kMaxTextureCount = 2048;
-		static constexpr uint32_t           kMaxShadowMapCount = 16;
+		static constexpr uint32_t           kMaxShadowMapCount = (kMaxLightNum - kMaxPointLightNum) + kMaxPointLightNum * 6;
+		static constexpr uint32_t           kDefalutCubeShadowMapSize = 1024;
 
 		UINT32 frame_index_ = 0;
 		std::vector<Frame> frames_;
@@ -84,6 +87,8 @@ namespace Engine
 
 		inline static const Vector4f			kDefaultLightColor = { 1.f,1.f,1.f,1.f};
 		inline static const Vector4f			kDefaultAmbientLight = { 0.2f,0.2f,0.2f,1.f};
+
+		bool b_regenerate_shadow_map_ = true;
 	};
 	extern GraphicsManager* g_pGraphicsManager;
 }

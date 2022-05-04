@@ -90,13 +90,14 @@ void Engine::GraphicsManager::GenerateShadowMapArray(UINT32 count)
 {
 
 }
-void Engine::GraphicsManager::BeginShadowMap(int light_mat_index)
+void Engine::GraphicsManager::BeginShadowMap(Light& light, int light_id, int point_light_id, int cube_map_id)
+{
+    b_regenerate_shadow_map_ = false;
+}
+void Engine::GraphicsManager::EndShadowMap(int light_index, int point_light_id, bool is_point_light, bool final)
 {
 }
-void Engine::GraphicsManager::EndShadowMap(int light_index, bool final)
-{
-}
-void Engine::GraphicsManager::SetShadowMap(const intptr_t shadowmap)
+void Engine::GraphicsManager::SetShadowMap()
 {
 }
 void Engine::GraphicsManager::DestroyShadowMap(intptr_t& shadowmap)
@@ -180,11 +181,28 @@ void Engine::GraphicsManager::CalculateCameraMatrix()
 
 void Engine::GraphicsManager::CalculateLights()
 {
+    static const Vector3f kForward[6]{ 
+        {1.f,0.f,0.f}, //+x
+        {-1.f,0.f,0.f}, //-x
+        {0.f,1.f,0.f}, //+y
+        {0.f,-1.f,0.f}, //-y
+        {0.f,0.f,1.f}, //+z
+        {0.f,0.f,-1.f}, //-z
+    };
+    static const Vector3f kUpDirs[6]{
+        {0.f,1.f,0.f}, //+x
+        {0.f,1.f,0.f}, //-x
+        {0.f,0.f,-1.f}, //+y
+        {0.f,0.f,1.f}, //-y
+        {0.f,1.f,0.f}, //+z
+        {0.f,1.f,0.f}, //-z
+    };
     auto& draw_frame_context_ = frames_[frame_index_].frame_context;
     auto& scene = g_pSceneManager->GetSceneForRendering();
     if(scene.GetFirstLightNode())
     {
         int i = 0;
+        int point_light_count = 0;
         for (auto& node : scene.LightNodes)
         {
             if (auto light = scene.GetLight(node.second->GetSceneObjectRef()); light != nullptr)
@@ -211,7 +229,19 @@ void Engine::GraphicsManager::CalculateLights()
                     break;
                 case Engine::ELightType::kPoint:
                 {
+                    Matrix4x4f proj_mat_for_shaodw_map{};
+                    Matrix4x4f view_mat_for_shaodw_map{};
+                    BuildPerspectiveFovLHMatrix(proj_mat_for_shaodw_map,0.5f * kPi,1.f,10.f,10000.f);
+                    Transpose(proj_mat_for_shaodw_map);
+                    for(int j = 0; j < 6; ++j)
+                    {
+                        auto world_pos = node.second->GetWorldPosition();
+                        BuildViewMatrixLookToLH(view_mat_for_shaodw_map, node.second->GetWorldPosition(),kForward[j],kUpDirs[j]);
+                        draw_frame_context_.point_light_vp_mat[j + point_light_count * 6] = proj_mat_for_shaodw_map * Transpose(view_mat_for_shaodw_map);
+                        view_mat_for_shaodw_map = {};
+                    }
                     single_light.type = 1;
+                    ++point_light_count;
                 }
                     break;
                 case Engine::ELightType::kSpot:

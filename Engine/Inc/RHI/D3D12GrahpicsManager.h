@@ -61,13 +61,11 @@ namespace Engine
         void BeginFrame() final;
         void EndFrame() final;
 
-        void GenerateShadowMapArray(UINT32 count = kMaxShadowMapCount);
-        void BeginShadowMap(int light_mat_index = 0) final;
-        void EndShadowMap(int light_index, bool final);
-        void SetShadowMap(const intptr_t shadowmap);
+        void GenerateShadowMapArray(UINT32 count = kMaxLightNum);
+        void BeginShadowMap(Light& light, int light_id, int point_light_id, int cube_map_id) final;
+        void EndShadowMap(int light_index, int point_light_id, bool is_point_light, bool final) final;
+        void SetShadowMap();
         void DestroyShadowMap(intptr_t& shadowmap);
-
-        
         void BeginRenderPass() final;
 
         HRESULT ResetCommandList();
@@ -124,6 +122,9 @@ namespace Engine
         uint32_t                        dsv_desc_size_;
         uint32_t                        cbv_srv_uav_desc_size_;
         uint32_t                        vertex_buf_per_frame_num_;
+
+        uint32_t                        cube_shadow_map_srv_start_ = 0u;
+        uint32_t                        cur_point_light_index = 0u;
 
         uint32_t                        shadow_map_start_;      //start pos of the shadow_map based on the srv handle
         uint32_t                        shadow_map_buf_start_;      //start pos of the shadow_map based on the srv handle
