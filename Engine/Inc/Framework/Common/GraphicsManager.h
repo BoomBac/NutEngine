@@ -24,13 +24,13 @@ namespace Engine
 
 		virtual void DrawBatch(std::shared_ptr<DrawBatchContext> batch);
 
-
 		virtual void GenerateShadowMapArray(UINT32 count);
 		virtual void BeginShadowMap(Light& light, int light_id, int point_light_id = 0, int cube_map_id = 0);
-		virtual void EndShadowMap(int light_index, int point_light_id = 0, bool is_point_light = false, bool final = false);
+
+		virtual void EndShadowMap(int light_index, bool is_point_light = false, int point_light_id = 0);
+		virtual void EndShadowMap();
 
 		virtual void SetShadowMap();
-		virtual void DestroyShadowMap(intptr_t& shadowmap);
 
 		//temp just adjust view_matrix form light to camera
 		virtual void BeginRenderPass();
@@ -86,7 +86,7 @@ namespace Engine
 		inline static const Vector3f			kUp = { 0.f,100000.f,0.f };
 
 		inline static const Vector4f			kDefaultLightColor = { 1.f,1.f,1.f,1.f};
-		inline static const Vector4f			kDefaultAmbientLight = { 0.2f,0.2f,0.2f,1.f};
+		inline static const Vector4f			kDefaultAmbientLight = { 0.0f,0.0f,0.0f,1.f};
 
 		bool b_regenerate_shadow_map_ = true;
 	};

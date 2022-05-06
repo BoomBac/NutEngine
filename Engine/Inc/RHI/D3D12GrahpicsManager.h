@@ -63,9 +63,9 @@ namespace Engine
 
         void GenerateShadowMapArray(UINT32 count = kMaxLightNum);
         void BeginShadowMap(Light& light, int light_id, int point_light_id, int cube_map_id) final;
-        void EndShadowMap(int light_index, int point_light_id, bool is_point_light, bool final) final;
-        void SetShadowMap();
-        void DestroyShadowMap(intptr_t& shadowmap);
+        void EndShadowMap(int light_index, bool is_point_light, int point_light_id) final;
+        void EndShadowMap() final;
+        void SetShadowMap() final;
         void BeginRenderPass() final;
 
         HRESULT ResetCommandList();

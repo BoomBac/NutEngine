@@ -94,15 +94,16 @@ void Engine::GraphicsManager::BeginShadowMap(Light& light, int light_id, int poi
 {
     b_regenerate_shadow_map_ = false;
 }
-void Engine::GraphicsManager::EndShadowMap(int light_index, int point_light_id, bool is_point_light, bool final)
+void Engine::GraphicsManager::EndShadowMap(int light_index, bool is_point_light, int point_light_id)
+{
+}
+void Engine::GraphicsManager::EndShadowMap()
 {
 }
 void Engine::GraphicsManager::SetShadowMap()
 {
 }
-void Engine::GraphicsManager::DestroyShadowMap(intptr_t& shadowmap)
-{
-}
+
 void Engine::GraphicsManager::BeginRenderPass()
 {
 }
@@ -207,6 +208,7 @@ void Engine::GraphicsManager::CalculateLights()
         {
             if (auto light = scene.GetLight(node.second->GetSceneObjectRef()); light != nullptr)
             {
+                assert(i < kMaxLightNum - kMaxPointLightNum);
                 Light single_light;
                 single_light.light_color = light->GetColor().value_.xyz;
                 single_light.light_direction = node.second->GetForwardDir();
@@ -225,6 +227,7 @@ void Engine::GraphicsManager::CalculateLights()
                     Transpose(light_view);
                     single_light.vp_matrix_ = light_view * single_light.vp_matrix_;
                     single_light.type = 0;
+                    draw_frame_context_.lights_[i++] = single_light;
                 }
                     break;
                 case Engine::ELightType::kPoint:
@@ -241,7 +244,7 @@ void Engine::GraphicsManager::CalculateLights()
                         view_mat_for_shaodw_map = {};
                     }
                     single_light.type = 1;
-                    ++point_light_count;
+                    draw_frame_context_.lights_[kMaxLightNum - kMaxPointLightNum + point_light_count++] = single_light;
                 }
                     break;
                 case Engine::ELightType::kSpot:
@@ -253,12 +256,13 @@ void Engine::GraphicsManager::CalculateLights()
                     single_light.inner_angle = spot_light->inner_angle_;
                     single_light.outer_angle = spot_light->outer_angle_;
                     single_light.vp_matrix_ = light_view * single_light.vp_matrix_;
+                    draw_frame_context_.lights_[i++] = single_light;
                 }
                     break;
                 default:
                     break;
                 }
-                draw_frame_context_.lights_[i++] = single_light;
+
             }
         }
     }

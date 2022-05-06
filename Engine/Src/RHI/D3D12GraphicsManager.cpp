@@ -720,19 +720,8 @@ namespace Engine
 		p_cmdlist_->SetPipelineState(p_plstate_sm_.Get());
 	}
 
-	void D3d12GraphicsManager::EndShadowMap(int light_index, int point_light_id, bool is_point_light, bool final)
+	void D3d12GraphicsManager::EndShadowMap(int light_index, bool is_point_light,int point_light_id)
 	{
-		if(final)
-		{
-			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(p_rtv_heap_->GetCPUDescriptorHandleForHeapStart(), frame_index_, rtv_desc_size_);
-			CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(p_dsv_heap_->GetCPUDescriptorHandleForHeapStart());
-			p_cmdlist_->RSSetViewports(1, &vp_);
-			p_cmdlist_->RSSetScissorRects(1, &rect_);
-			p_cmdlist_->SetPipelineState(p_plstate_.Get());
-			p_cmdlist_->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
-			SetShadowMap();
-			return;
-		}
 		if(is_point_light)
 		{
 			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textures_[cube_shadow_map_srv_start_ + point_light_id].Get(),
@@ -746,6 +735,17 @@ namespace Engine
 		}
 	}
 
+	void D3d12GraphicsManager::EndShadowMap()
+	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(p_rtv_heap_->GetCPUDescriptorHandleForHeapStart(), frame_index_, rtv_desc_size_);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(p_dsv_heap_->GetCPUDescriptorHandleForHeapStart());
+		p_cmdlist_->RSSetViewports(1, &vp_);
+		p_cmdlist_->RSSetScissorRects(1, &rect_);
+		p_cmdlist_->SetPipelineState(p_plstate_.Get());
+		p_cmdlist_->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+		SetShadowMap();
+	}
+
 	void D3d12GraphicsManager::SetShadowMap()
 	{
 		auto texture_index = shadow_map_buf_start_;
@@ -754,10 +754,6 @@ namespace Engine
 		p_cmdlist_->SetGraphicsRootDescriptorTable(5, srvHandle);
 		srvHandle.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + cube_shadow_map_srv_start_) * cbv_srv_uav_desc_size_;
 		p_cmdlist_->SetGraphicsRootDescriptorTable(6, srvHandle);
-	}
-
-	void D3d12GraphicsManager::DestroyShadowMap(intptr_t& shadowmap)
-	{
 	}
 
 	void D3d12GraphicsManager::BeginRenderPass()
