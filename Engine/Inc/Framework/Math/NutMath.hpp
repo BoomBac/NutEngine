@@ -144,6 +144,7 @@ namespace Engine
 	using Vector4f = Vector4D<float>;
 	using Quaternion = Vector4D<float>;
 	using R8G8B8A8Unorm = Vector4D<uint8_t>;
+	using R8G8B8Unorm = Vector3D<uint8_t>;
 	using Vector4i = Vector4D<uint8_t>;
 
 	template<template<typename> typename TT, typename T>

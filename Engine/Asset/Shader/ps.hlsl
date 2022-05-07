@@ -106,7 +106,7 @@ float shadow_test(int shadow_map_index,float3 sp_pos_w,float3 light_pos_w)
 	shadow_uv.y = pos_light_space.y * -0.5f + 0.5f;
 	closest_depth = g_shadow_map[shadow_map_index].Sample(g_sampler, shadow_uv).x * 10000.f;
 	//float bias = clamp(0.001f* tan(acos(cos_theta)), 0.f, 0.01f);
-	float bias = 0.5f;
+	float bias = 2.f;
 	float cur_depth = length(sp_pos_w - light_pos_w);
 	if (cur_depth - closest_depth > bias)
 		return 0.3f;
@@ -139,5 +139,6 @@ float shadow_test_point_light(int cube_shadow_map_index,float3 sp_pos_w,float3 l
 			visbility = shadow_test(lights[i].shadow_map_index, input.positionW, lights[i].light_pos_);
 			linear_color += CalculateLight(lights[i], input) * visbility;
 		}
+
 	return float4(pow(clamp(linear_color, float3(0.f, 0.f, 0.f), float3(1.f, 1.f, 1.f)), 1.f / 2.2f), 1.f);
-	}
+}

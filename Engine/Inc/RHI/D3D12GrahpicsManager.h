@@ -67,10 +67,14 @@ namespace Engine
         void EndShadowMap() final;
         void SetShadowMap() final;
         void BeginRenderPass() final;
+        
+        void DrawSkyBox() final;
 
         HRESULT ResetCommandList();
         HRESULT CreateCommandList();
         HRESULT InitializePSO();
+
+        void CreateSkyBoxBuffer();
 
         HRESULT CreateDescriptorHeaps();
         HRESULT CreateRenderTarget();
@@ -78,6 +82,7 @@ namespace Engine
         HRESULT CreateGraphicsResources();
         HRESULT CreateSamplerBuffer();
         HRESULT CreateTextureBuffer(SceneObjectTexture& texture);
+        HRESULT CreateCubeTextureBuffer(std::vector<std::string> texture_path);
         HRESULT CreateConstantBuffer();
         HRESULT CreateIndexBuffer(const SceneObjectIndexArray& index_array);
         HRESULT CreateVertexBuffer(const SceneObjectVertexArray& vertex_array, EBufferType type = EBufferType::kNormal);
@@ -97,8 +102,13 @@ namespace Engine
         static constexpr uint32_t		    kTextureDescStartIndex = kFrameCount * (1 + kMaxSceneObjectCount);
         static constexpr FLOAT              kBackColor[] = { 0.5f, 0.0f, 0.0f, 1.0f };
 
-        ComPtr<ID3D12Resource> p_shadow_map_ = nullptr;
+        ComPtr<ID3D12Resource> p_env_map_ = nullptr;
+        D3D12_GPU_DESCRIPTOR_HANDLE env_map_handle_;
+        D3dDrawBatchContext sky_box_dbc_;
+        ComPtr<ID3D12PipelineState> p_plstate_skybox_ = nullptr;
+
         ComPtr<ID3D12PipelineState> p_plstate_sm_ = nullptr;
+
         
         ComPtr<ID3D12Device> p_device_ = nullptr;             // the pointer to our Direct3D device interface
         D3D12_VIEWPORT                  vp_;                         // viewport structure
@@ -110,7 +120,13 @@ namespace Engine
         ComPtr<ID3D12CommandQueue> p_cmdqueue_ = nullptr;          // the pointer to command queue
         ComPtr<ID3D12RootSignature> p_rootsig_ = nullptr;         // a graphics root signature defines what resources are bound to the pipeline
         ComPtr<ID3D12DescriptorHeap> p_rtv_heap_ = nullptr;               // an array of descriptors of GPU objects
-        ComPtr<ID3D12DescriptorHeap> p_dsv_heap_ = nullptr;               // an array of descriptors of GPU objects
+        /*
+        an array of descriptors of GPU objects
+        0&1 for output
+        2 ~ 2 + kMaxLightNum - kMaxPointLightNum for dir/spot light's shadow map
+        kMaxLightNum - kMaxPointLightNum ~ ?? for point light's cube shaodw map,every take up 6 slots
+        */
+        ComPtr<ID3D12DescriptorHeap> p_dsv_heap_ = nullptr;               
         ComPtr<ID3D12DescriptorHeap> p_cbv_heap_ = nullptr;               // an array of descriptors of GPU objects
         ComPtr<ID3D12DescriptorHeap> p_sampler_heap_ = nullptr;               // an array of descriptors of GPU objects
         ComPtr<ID3D12PipelineState> p_plstate_ = nullptr;         // an object maintains the state of all currently set shaders
@@ -123,17 +139,19 @@ namespace Engine
         uint32_t                        cbv_srv_uav_desc_size_;
         uint32_t                        vertex_buf_per_frame_num_;
 
-        uint32_t                        cube_shadow_map_srv_start_ = 0u;
-        uint32_t                        cur_point_light_index = 0u;
+        uint32_t                        cube_shadow_map_start_ = 0u;
 
-        uint32_t                        shadow_map_start_;      //start pos of the shadow_map based on the srv handle
-        uint32_t                        shadow_map_buf_start_;      //start pos of the shadow_map based on the srv handle
+        uint32_t                        shadow_map_tart_;      //start pos of the shadow_map based on the srv handle
 
         ComPtr<ID3D12Resource> p_vertex_buf_ = nullptr;          // the pointer to the vertex buffer
         std::vector<ComPtr<ID3D12Resource>>    buffers_;                          // the pointer to the vertex buffer
         std::vector<D3D12_VERTEX_BUFFER_VIEW>       vertex_buf_view_;                 // a view of the vertex buffer
         std::vector<D3D12_INDEX_BUFFER_VIEW>        index_buf_view_;                  // a view of the index buffer
 
+        /*
+        0                 shadow_map_tart_         cube_shadow_map_start_     
+        material texture  | shaodw_map            | cube_shade_map      offset 1
+        */                
         std::vector<ComPtr<ID3D12Resource>> textures_;
         std::map<std::string,INT32> texture_index_;
 #ifdef _DEBUG

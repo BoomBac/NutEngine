@@ -10,6 +10,9 @@ namespace Engine
 {
 	class GraphicsManager : public IRuntimeModule
 	{
+	private:
+		int ParserConfig();
+
 	public:
 		virtual ~GraphicsManager() {}
 		virtual int Initialize();
@@ -21,8 +24,9 @@ namespace Engine
 		virtual void UseShaderProgram(const INT32 shaderProgram);
 
 		virtual void DrawBatch(const std::vector<std::shared_ptr<DrawBatchContext>>& batches);
-
 		virtual void DrawBatch(std::shared_ptr<DrawBatchContext> batch);
+
+		virtual void DrawSkyBox();
 
 		virtual void GenerateShadowMapArray(UINT32 count);
 		virtual void BeginShadowMap(Light& light, int light_id, int point_light_id = 0, int cube_map_id = 0);
@@ -42,6 +46,7 @@ namespace Engine
 		void MoveCameraRight(float distance);
 		void CameraRotateYaw(float angle);
 		void CameraRotatePitch(float angle);
+
 #ifdef _DEBUG
 		virtual void DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color);
 		virtual void DrawBox(const Vector3f& bbMin, const Vector3f& bbMax, const Vector3f& color);
@@ -74,6 +79,9 @@ namespace Engine
 		static constexpr uint32_t           kMaxShadowMapCount = (kMaxLightNum - kMaxPointLightNum) + kMaxPointLightNum * 6;
 		static constexpr uint32_t           kDefalutCubeShadowMapSize = 1024;
 
+		bool b_use_env_light_ = true;
+		bool b_use_shadow_ = true;
+
 		UINT32 frame_index_ = 0;
 		std::vector<Frame> frames_;
 		std::vector<std::shared_ptr<IDrawPass>> draw_passes_;
@@ -86,7 +94,7 @@ namespace Engine
 		inline static const Vector3f			kUp = { 0.f,100000.f,0.f };
 
 		inline static const Vector4f			kDefaultLightColor = { 1.f,1.f,1.f,1.f};
-		inline static const Vector4f			kDefaultAmbientLight = { 0.0f,0.0f,0.0f,1.f};
+		Vector4f							kDefaultAmbientLight;
 
 		bool b_regenerate_shadow_map_ = true;
 	};

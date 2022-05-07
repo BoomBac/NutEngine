@@ -60,7 +60,9 @@ unique_ptr<Scene> Engine::FbxParser::Parse(const std::string & file_path)
 	}
 	if (fbx_rt != nullptr)
 	{
-		for (int i = 0; i < fbx_rt->GetChildCount(); i++) {
+		auto child_num = fbx_rt->GetChildCount();
+		for (int i = 0; i < child_num; i++)
+		{
 			ConvertFbxConstructToSceneNode(fbx_rt->GetChild(i), root_node,*nut_scene,fbx_scene);
 		}
 	}
@@ -71,6 +73,7 @@ unique_ptr<Scene> Engine::FbxParser::Parse(const std::string & file_path)
 
 bool Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, std::shared_ptr<BaseSceneNode>& base_node, Scene& scene, fbxsdk::FbxScene* fbx_scene)
 {
+	if(base_node == nullptr) return false;
 	std::shared_ptr<BaseSceneNode> node;
 	string object_name = object->GetName();
 	fbxsdk::FbxNodeAttribute* attribute = object->GetNodeAttribute();
@@ -138,10 +141,11 @@ bool Engine::FbxParser::ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object, 
 	default:
 		break;
 	}
-	base_node->AppendChild(std::move(node));
-	for(int32_t i = 0; i < object->GetChildCount(); i++) {
+	for(int32_t i = 0; i < object->GetChildCount(); i++) 
+	{
 		ConvertFbxConstructToSceneNode(object->GetChild(i),node,scene, fbx_scene);
 	}
+	base_node->AppendChild(std::move(node));
 	return true;
 }
 

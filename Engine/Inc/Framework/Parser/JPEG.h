@@ -16,10 +16,19 @@ namespace Engine
 			Image image{};
 			int channel = 0;
 			UINT8* data = stbi_load(path.c_str(), reinterpret_cast<int*>(&image.width), reinterpret_cast<int*>(&image.height), &channel, 0);
-			image.bit_count = 32;
+			image.bit_count = channel * 8;
 			image.pitch = ((image.width * image.bit_count >> 3) + 3) & ~3;
 			image.data_size = image.pitch * image.height;
-			image.data = std::move(reinterpret_cast<R8G8B8A8Unorm*>(data));
+			if(channel==3)
+			{
+				image.format = EImageFormat::kNutformatR8G8B8;
+				image.data = std::move(reinterpret_cast<R8G8B8Unorm*>(data));
+			}
+			else if (channel == 4)
+			{
+				image.format = EImageFormat::kNutformatR8G8B8A8;
+				image.data = std::move(reinterpret_cast<R8G8B8A8Unorm*>(data));
+			}
 			return image;
 		}
 	};

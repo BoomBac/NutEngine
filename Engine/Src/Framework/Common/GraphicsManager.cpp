@@ -7,22 +7,32 @@
 #include "Framework/DrawPass/ForwardRenderPass.h"
 #include "Framework/DrawPass/ShadowMapPass.h"
 #include "Framework/DrawPass/HUDPass.h"
+#include "Framework/DrawPass/SkyBoxPass.h"
 
 #include <directxmath.h>
 
 
 using namespace Engine;
 
+namespace Engine
+{
+    extern std::map<std::string, std::string> g_Config_map;
+}
 
 int Engine::GraphicsManager::Initialize()
 {
     int result = 0;
+    result += ParserConfig();
     frames_.resize(kFrameCount);
     InitConstants();
-    draw_passes_.emplace_back(std::make_shared<ShadowMapPass>());
+    if(b_use_shadow_)
+         draw_passes_.emplace_back(std::make_shared<ShadowMapPass>());
     draw_passes_.emplace_back(std::make_shared<ForwardRenderPass>());
     draw_passes_.emplace_back(std::make_shared<HUDPass>());
+    if(b_use_env_light_)
+        draw_passes_.emplace_back(std::make_shared<SkyBoxPass>());
     p_cam_mgr_ = std::make_unique<CameraManager>();
+
     return result;
 }
 
@@ -65,6 +75,52 @@ void Engine::GraphicsManager::Draw()
 //    RenderDebugBuffers();
 //#endif //_DEBUG
 }
+int Engine::GraphicsManager::ParserConfig()
+{
+    int ret = 0;
+    auto it = g_Config_map.find("DefaultAmbientLight");
+    if(it != g_Config_map.end())
+    {
+        std::string str = it->second;
+        for(auto& c : str)
+        {
+            if(c==',') c = ' ';
+        }
+        std::stringstream ss(str);
+        ss >> kDefaultAmbientLight[0];
+        ss >> kDefaultAmbientLight[1];
+        ss >> kDefaultAmbientLight[2];
+        ss >> kDefaultAmbientLight[3];
+    }
+    else
+    {
+        NE_LOG(ALL,kWarning,"config DefaultAmbientLight missing,using the default value float3(0.f)")
+        ++ret;
+    }
+    it = g_Config_map.find("UseEnvLight");
+    if(it != g_Config_map.end())
+    {
+        if(it->second == "true") b_use_env_light_ = true;
+        else b_use_env_light_ = false;
+    }
+    else
+    {
+        NE_LOG(ALL, kWarning, "config UseEnvLight missing,using the default value true")
+            ++ret;
+    }
+    it = g_Config_map.find("UseShadow");
+    if (it != g_Config_map.end())
+    {
+        if (it->second == "true") b_use_shadow_ = true;
+        else b_use_shadow_ = false;
+    }
+    else
+    {
+        NE_LOG(ALL, kWarning, "config UseShadow missing,using the default value true")
+            ++ret;
+    }
+    return ret;
+}
 void Engine::GraphicsManager::Present()
 {
 }
@@ -84,6 +140,11 @@ void Engine::GraphicsManager::DrawBatch(const std::vector<std::shared_ptr<DrawBa
 
 void Engine::GraphicsManager::DrawBatch(std::shared_ptr<DrawBatchContext> batch)
 {
+}
+
+void Engine::GraphicsManager::DrawSkyBox()
+{
+
 }
 
 void Engine::GraphicsManager::GenerateShadowMapArray(UINT32 count)
@@ -223,10 +284,11 @@ void Engine::GraphicsManager::CalculateLights()
                 {
                 case Engine::ELightType::kDirectional:
                 {
-                    BuildOrthographicMatrix(light_view, -640.f, 640.f, 450.f, -450.f, 10.f, 10000.f);
+                    BuildOrthographicMatrix(light_view, -3200.f, 3200.f, 2250.f, -2250.f, 100.f, 100000.f);
                     Transpose(light_view);
                     single_light.vp_matrix_ = light_view * single_light.vp_matrix_;
                     single_light.type = 0;
+                    single_light.light_instensity = light->GetIntensity() / 1000.f;
                     draw_frame_context_.lights_[i++] = single_light;
                 }
                     break;

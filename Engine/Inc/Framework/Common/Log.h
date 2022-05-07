@@ -87,7 +87,7 @@ namespace Engine
 		const uint16_t& GetOutputMark() const {return output_mark_;}
 		const std::string& GetOutputPath() const{return output_path_;}
 	private:
-		int ParseConfig();
+		int ParserConfig();
 	};
 	extern LogManager* g_pLogManager;
 	template<typename... Targs>

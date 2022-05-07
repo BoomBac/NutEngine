@@ -245,17 +245,17 @@ namespace Engine
     {
     public:
         SceneObjectTexture() : BaseSceneObject(ESceneObjectType::kSceneObjectTypeTexture), tex_coord_id_(0) {};
-        SceneObjectTexture(std::string& name) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeTexture), tex_coord_id_(0), name_(name) {};
-        SceneObjectTexture(std::string& path ,std::string& name) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeTexture), tex_coord_id_(0), name_(name),path_(path) {};
+        SceneObjectTexture(std::string path) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeTexture), tex_coord_id_(0), path_(path) {};
+        SceneObjectTexture(std::string path ,std::string name) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeTexture), tex_coord_id_(0), name_(name),path_(path) {};
         SceneObjectTexture(uint32_t coord_index, std::shared_ptr<Image>& image) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeTexture), tex_coord_id_(coord_index), p_image_(image) {};
         SceneObjectTexture(uint32_t coord_index, std::shared_ptr<Image>&& image) : BaseSceneObject(ESceneObjectType::kSceneObjectTypeTexture), tex_coord_id_(coord_index), p_image_(std::move(image)) {};
         SceneObjectTexture(SceneObjectTexture&) = default;
         SceneObjectTexture(SceneObjectTexture&&) = default;
         void SetName(std::string& name) { name_ = name; };
         void SetName(std::string&& name) { name_ = std::move(name); };
-        const std::string GetName() { return name_;}
+        const std::string& GetName();
         void AddTransform(Matrix4x4f& matrix) { transforms_.push_back(matrix); };
-        const Image& GetImage()
+        Image& GetImage()
         {
             if(!p_image_) LoadTexture();
             return *p_image_;

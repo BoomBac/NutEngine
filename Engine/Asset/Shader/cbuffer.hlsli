@@ -48,6 +48,7 @@ cbuffer LightIndex : register(b2)
 Texture2D g_texture : register(t0);
 Texture2D g_shadow_map[6] : register(t1);
 TextureCube g_cube_shadow_map[2] : register(t7);
+TextureCube g_sky_box : register(t9);
 
 SamplerState g_sampler : register(s0);
 

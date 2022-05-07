@@ -5,9 +5,13 @@
 namespace Engine
 {
 	extern std::map<std::string, std::string> g_Config_map;
+}
+
+namespace Engine
+{
 	int Engine::LogManager::Initialize()
 	{
-		int ret = ParseConfig();
+		int ret = ParserConfig();
 		appenders_.push_back(new OutputAppender());
 		return ret;
 	}
@@ -23,7 +27,7 @@ namespace Engine
 	{
 		appenders_.push_back(appender);
 	}
-	int LogManager::ParseConfig()
+	int LogManager::ParserConfig()
 	{
 		std::map<std::string, std::string>::iterator it;
 		std::stringstream ss;

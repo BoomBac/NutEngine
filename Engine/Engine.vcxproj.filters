@@ -228,6 +228,9 @@
     <ClInclude Include="Inc\Framework\DrawPass\HUDPass.h">
       <Filter>Inc\Framework\DrawPass</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\Framework\DrawPass\SkyBoxPass.h">
+      <Filter>Inc\Framework\DrawPass</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -308,6 +311,9 @@
     <ClCompile Include="Src\Framework\DrawPass\HUDPass.cpp">
       <Filter>Src\Framework\DrawPass</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Framework\DrawPass\SkyBoxPass.cpp">
+      <Filter>Src\Framework\DrawPass</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Asset\Shader\vs.hlsl">
@@ -332,6 +338,12 @@
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Asset\Shader\ps_hud.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\vs_sb.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\ps_sb.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
   </ItemGroup>

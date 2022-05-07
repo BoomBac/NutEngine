@@ -150,7 +150,22 @@ namespace Engine
 		else if (type == EMaterialProperty::kSpecularFactor) specular_power_ = texture;
 		else if (type == EMaterialProperty::kNormalMap) normal_map_ = texture;
 	}
+
 	//-----------------------texture
+	const std::string& SceneObjectTexture::GetName()
+	{
+		if(!name_.empty()) return name_;
+		int pos = 0;
+		for(auto it = path_.rbegin(); it != path_.rend(); it++)
+		{
+			auto c = *it;
+			if(*it=='/' || *it == '\\')
+				break;
+			++pos;
+		}
+		name_ = path_.substr(path_.size() - pos);
+		return name_;
+	}
 	void SceneObjectTexture::GenerateCheckBoard(INT64 w, INT64 h)
 	{
 		//width_ = w;
@@ -177,6 +192,7 @@ namespace Engine
 				//jpeg handle all format temp
 				JpegParser parser;
 				p_image_ = std::make_shared<Image>(parser.Parse(path_.c_str()));
+				channel_ = p_image_->channel;
 				width_ = p_image_->width;
 				height_ = p_image_->height;
 				pitch_ = p_image_->pitch;

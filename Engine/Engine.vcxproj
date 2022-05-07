@@ -193,6 +193,7 @@
     <ClInclude Include="Inc\Framework\DrawPass\ForwardRenderPass.h" />
     <ClInclude Include="Inc\Framework\DrawPass\HUDPass.h" />
     <ClInclude Include="Inc\Framework\DrawPass\ShadowMapPass.h" />
+    <ClInclude Include="Inc\Framework\DrawPass\SkyBoxPass.h" />
     <ClInclude Include="Inc\Framework\Geometries\Box.h" />
     <ClInclude Include="Inc\Framework\Geometries\Geometry.h" />
     <ClInclude Include="Inc\Framework\Geometries\Plane.h" />
@@ -240,6 +241,7 @@
     <ClCompile Include="Src\Framework\DrawPass\ForwardRenderPass.cpp" />
     <ClCompile Include="Src\Framework\DrawPass\HUDPass.cpp" />
     <ClCompile Include="Src\Framework\DrawPass\ShadowMapPass.cpp" />
+    <ClCompile Include="Src\Framework\DrawPass\SkyBoxPass.cpp" />
     <ClCompile Include="Src\Framework\Geometries\Box.cpp" />
     <ClCompile Include="Src\Framework\Geometries\Geometry.cpp" />
     <ClCompile Include="Src\Framework\Geometries\Plane.cpp" />
@@ -275,6 +277,12 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
+    <FxCompile Include="Asset\Shader\ps_sb.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
     <FxCompile Include="Asset\Shader\vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
@@ -288,6 +296,12 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="Asset\Shader\vs_hud.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\vs_sb.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>

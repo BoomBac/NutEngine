@@ -1,8 +1,7 @@
 #pragma once
 
 namespace Engine
-{
-	class IRuntimeModule
+{	class IRuntimeModule
 	{
 	public:
 		virtual ~IRuntimeModule() = default;
