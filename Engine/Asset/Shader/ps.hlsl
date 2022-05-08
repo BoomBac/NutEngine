@@ -2,7 +2,7 @@
 #include "type.hlsli"
 
 
-float LinearInterpolate(float var,float begin,float end)
+float LinearInterpolate(float var, float begin, float end)
 {
 	if (var < begin)
 		return 1.f;
@@ -30,14 +30,14 @@ float CalculateDistance(float3 start, float3 end)
 	return sqrt(pow(end.x - start.x, 2.f) + pow(end.y - start.y, 2.f) + pow(end.z - start.z, 2.f));
 }
 
-float3 ProjectionOnPlane(float3 p,float3 plane_normal,float3 plane_center)
+float3 ProjectionOnPlane(float3 p, float3 plane_normal, float3 plane_center)
 {
-	return p - dot(p - plane_center,plane_normal) * plane_normal;
+	return p - dot(p - plane_center, plane_normal) * plane_normal;
 }
 
 bool IsAbovePlane(float3 p, float3 plane_normal, float3 plane_center)
 {
-	return dot(p - plane_center,plane_normal) > 0.f;
+	return dot(p - plane_center, plane_normal) > 0.f;
 }
 
 float3 linePlaneIntersect(float3 line_start, float3 line_dir, float3 plane_normal, float3 center_of_plane)
@@ -45,56 +45,47 @@ float3 linePlaneIntersect(float3 line_start, float3 line_dir, float3 plane_norma
 	return line_start + line_dir * (dot(center_of_plane - line_start, plane_normal) / dot(line_dir, plane_normal));
 }
 
-float3 CalculateLight(Light light, PSInput input)
+float GeometrySchlickGGX(float NdotV, float roughness)
 {
-		if (light.light_intensity_ == 0.f)
-			return float3(0.f, 0.f, 0.f);
-		float3 N = normalize(input.normal);
-		float3 PtoL = normalize(light.light_pos_ - input.positionW);
-		float dis = distance(light.light_pos_, input.positionW);
-		float3 LDir = normalize(light.light_dir_);
-		float LToPAngle = acos(dot(-PtoL, -LDir)) * 180.f / 3.14159f;
-		float falloff = AttenuationCurve(dis, 1, light.falloff_begin_, light.falloff_end_);
-		float3 R;
-		//look to camera
-		float3 V = normalize(g_camera_position_ - input.positionW.xyz);
-		float3 linear_color = (0.f, 0.f, 0.f);
-		switch (light.light_type_)
-		{
-			case 0: //direction light
-		{
-				R = normalize(reflect(-LDir,N));
-					falloff = 1.f;
-				}
-				break;
-			case 1: //point light
-		{
-					R = normalize(reflect(-PtoL, N));
-					LDir = PtoL;
-				}
-				break;
-			case 2: //spot light
-			{
-				R = normalize(reflect(-LDir, N));
-			falloff *= AttenuationCurve(LToPAngle, 1, light.inner_angle_ * 0.5f, light.outer_angle_ * 0.5f);
-			}
-				break;
-		}
-		if (g_use_texture_ == 1.f)
-		{
-			linear_color = light.light_intensity_ * falloff * light.light_color_ * g_texture.Sample(g_sampler, input.uv).xyz * max(dot(N, -LDir), 0.f)
-				+ g_specular_color_.rgb * pow(max(0.f, dot(R, V)), max(8.f, g_gloss_));
-		}
-		else
-		{
-		linear_color = falloff * light.light_intensity_ * (light.light_color_ * g_base_color_.rgb * max(dot(N, LDir), 0.f) +
-			light.light_color_ * pow(max(0.f, dot(R, V)), max(8.f, g_gloss_)));
-	}
-	return linear_color;
+	float r = (roughness + 1.0);
+	float k = (r * r) / 8.0;
 
+	float num = NdotV;
+	float denom = NdotV * (1.0 - k) + k;
+	
+	return num / denom;
 }
 
-float shadow_test(int shadow_map_index,float3 sp_pos_w,float3 light_pos_w)
+float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
+{
+	float NdotV = max(dot(N, V), 0.0);
+	float NdotL = max(dot(N, L), 0.0);
+	float ggx2 = GeometrySchlickGGX(NdotV, roughness);
+	float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+	
+	return ggx1 * ggx2;
+}
+
+float DistributionGGX(float3 N, float3 H, float roughness)
+{
+	float a = roughness * roughness;
+	float a2 = a * a;
+	float NdotH = max(dot(N, H), 0.f);
+	float NdotH2 = NdotH * NdotH;
+	float up = a2;
+	float bottom = NdotH2 * (a2 - 1.f) + 1.f;
+	bottom = PI * bottom * bottom;
+	return up / bottom;
+}
+
+float3 SchlickFresnel(float3 H, float3 V, float3 f)
+{
+	return f + (float3(1.f, 1.f, 1.f) - f) * pow(1.f - dot(H, V), 5.f);
+}
+
+
+
+float shadow_test(int shadow_map_index, float3 sp_pos_w, float3 light_pos_w)
 {
 	if (shadow_map_index == -1)
 		return 1.f;
@@ -113,7 +104,7 @@ float shadow_test(int shadow_map_index,float3 sp_pos_w,float3 light_pos_w)
 	return 1.f;
 }
 
-float shadow_test_point_light(int cube_shadow_map_index,float3 sp_pos_w,float3 light_pos_w)
+float shadow_test_point_light(int cube_shadow_map_index, float3 sp_pos_w, float3 light_pos_w)
 {
 	if (cube_shadow_map_index == -1)
 		return 1.f;
@@ -124,21 +115,94 @@ float shadow_test_point_light(int cube_shadow_map_index,float3 sp_pos_w,float3 l
 		return 0.3f;
 	return 1.f;
 }
-	float4 main
 
-	(PSInput input):
+float3 CookTorranceBRDF(PSInput input, Light light)
+{
+	float roughness = 0.1f;
+	float metallic = 0.f;
+	float3 albedo = { 1.f, 1.0f, 1.f };
+	float3 N = normalize(input.normal);
+	float3 L = normalize(light.light_dir_);
+	float3 V = normalize(g_camera_position_ - input.positionW);
+	float G = GeometrySmith(N, V, L, roughness);
+	float3 H = normalize(L + V);
+	float NDF = DistributionGGX(N, H, roughness);
+	float3 F = SchlickFresnel(H, N, float3(0.4, 0.4, 0.4));
+	float3 up = NDF * G * F;
+	float a = max(dot(N, V), 0.f);
+	float b = max(dot(N, L), 0.f);
+	float3 bottom = 4.f * a * b + 0.0000001f;
+	float3 specular = up / bottom;
+	float3 KS = F;
+	float3 kD = float3(1.f, 1.f, 1.f) - KS;
+	kD *= 1.f - metallic;
+	return kD * albedo / PI + KS * specular;
+}
+
+float3 CalculateLight(Light light, PSInput input)
+{
+	if (light.light_intensity_ == 0.f)
+		return float3(0.f, 0.f, 0.f);
+	float3 N = normalize(input.normal);
+	float3 PtoL = normalize(light.light_pos_ - input.positionW);
+	float dis = distance(light.light_pos_, input.positionW);
+	float3 LDir = normalize(light.light_dir_);
+	float LToPAngle = acos(dot(-PtoL, -LDir)) * 180.f / 3.14159f;
+	float falloff = AttenuationCurve(dis, 1, light.falloff_begin_, light.falloff_end_);
+	float3 R;
+		//look to camera
+	float3 V = normalize(g_camera_position_ - input.positionW.xyz);
+	float3 linear_color = (0.f, 0.f, 0.f);
+	switch (light.light_type_)
+	{
+		case 0: //direction light
+		{
+				R = normalize(reflect(-LDir, N));
+				falloff = 1.f;
+			}
+			break;
+		case 1: //point light
+		{
+				R = normalize(reflect(-PtoL, N));
+				LDir = PtoL;
+			}
+			break;
+		case 2: //spot light
+			{
+				R = normalize(reflect(-LDir, N));
+				falloff *= AttenuationCurve(LToPAngle, 1, light.inner_angle_ * 0.5f, light.outer_angle_ * 0.5f);
+			}
+			break;
+	}
+		
+	if (g_use_texture_ == 1.f)
+	{
+		linear_color = light.light_intensity_ * falloff * light.light_color_ * g_texture.Sample(g_sampler, input.uv).xyz * max(dot(N, -LDir), 0.f)
+				+ g_specular_color_.rgb * pow(max(0.f, dot(R, V)), max(8.f, g_gloss_));
+	}
+	else
+	{
+		//linear_color = falloff * light.light_intensity_ * (light.light_color_ * g_base_color_.rgb * max(dot(N, LDir), 0.f) +light.light_color_ * pow(max(0.f, dot(R, V)), max(8.f, g_gloss_)));
+		linear_color = falloff * light.light_intensity_ * light.light_color_ * CookTorranceBRDF(input, light);
+
+	}
+	return linear_color;
+
+}
+
+float4 main
+	(PSInput input) :
 	SV_TARGET
 {
-		float3 linear_color = g_ambient_color_.xyz;
-		for (int i = 0; i < 40; ++i)
-		{
+	float3 linear_color = g_ambient_color_.xyz;
+	for (int i = 0; i < 40; ++i)
+	{
 		float visbility = 0;
 		if (lights[i].light_type_ == 1)
 			visbility = shadow_test_point_light(lights[i].shadow_map_index, input.positionW, lights[i].light_pos_);
 		else
 			visbility = shadow_test(lights[i].shadow_map_index, input.positionW, lights[i].light_pos_);
-			linear_color += CalculateLight(lights[i], input) * visbility;
-		}
-
+		linear_color += CalculateLight(lights[i], input) * visbility;
+	}
 	return float4(pow(clamp(linear_color, float3(0.f, 0.f, 0.f), float3(1.f, 1.f, 1.f)), 1.f / 2.2f), 1.f);
 }

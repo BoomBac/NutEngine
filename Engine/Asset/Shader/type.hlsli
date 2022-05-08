@@ -26,4 +26,5 @@ struct vs2_sm
 	float3 postionW : POSITIONT;
 };
 
+static const float PI = 3.1415926535f;
 #endif //__TYPE_H__
