@@ -309,14 +309,8 @@ void Engine::FbxParser::GenerateLight(const fbxsdk::FbxLight* light, Scene& scen
 	_light->SetColor(lcolor, temp);
 	lcolor = "intensity";
 	_light->SetParam(lcolor, static_cast<float>(light->Intensity.Get()));	
-	auto a = light->FarAttenuationEnd.Get();
-	auto b = light->FarAttenuationStart.Get();
-	auto c = light->NearAttenuationEnd.Get();
-	auto d = light->NearAttenuationStart.Get();
-	auto x = light->DecayStart.Get();
-	auto e = light->DecayType.Get();
-	auto f = light->DecayStart.Get();
 	scene.Lights[light->GetName()] = _light;
+	_light->SetName(light->GetName());
 }
 
 bool FbxParser::GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::FbxMesh* mesh, Scene& scene)

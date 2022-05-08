@@ -22,10 +22,27 @@ namespace Engine
 	class ThreadPool
 	{
 	public:
+		inline static int cur_thread_num = 0;
 		using Task = std::function<void()>;
 		ThreadPool()
 		{
+			int hd_cy = std::thread::hardware_concurrency();
+			cur_thread_num += hd_cy;
+			if(cur_thread_num > 1.5 * hd_cy)
+			{
+				NE_LOG(ALL,kWarning,"The number of threads currently running({}) is greater than the hardware recommendation, note the performance tradeoff",cur_thread_num)
+			}
 			Start(std::thread::hardware_concurrency());
+
+		}
+		ThreadPool(int thread_num)
+		{
+			cur_thread_num += thread_num;
+			if (cur_thread_num > 1.5 * std::thread::hardware_concurrency())
+			{
+				NE_LOG(ALL, kWarning, "The number of threads currently running({}) is greater than the hardware recommendation, note the performance tradeoff", cur_thread_num)
+			}
+			Start(thread_num);
 		}
 		~ThreadPool()
 		{

@@ -1,6 +1,7 @@
 #ifndef __CAMERA_MANAGER_H__
 #define __CAMERA_MANAGER_H__
-#include "SceneObject.h"
+
+#include "Framework/Scene/SceneObjectCamera.h"
 #include "Framework/Math/NutMath.hpp"
 
 namespace Engine

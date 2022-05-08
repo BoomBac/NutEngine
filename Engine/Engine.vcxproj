@@ -185,11 +185,10 @@
     <ClInclude Include="Inc\Framework\Common\SceneManager.h" />
     <ClInclude Include="Inc\Framework\Common\MemoryManager.hpp" />
     <ClInclude Include="Inc\Framework\Common\Scene.h" />
-    <ClInclude Include="Inc\Framework\Common\SceneNode.h" />
-    <ClInclude Include="Inc\Framework\Common\SceneObject.h" />
     <ClInclude Include="Inc\Framework\Common\ShaderManager.h" />
     <ClInclude Include="Inc\Framework\Common\ThreadPool.h" />
     <ClInclude Include="Inc\Framework\Common\TimerManager.h" />
+    <ClInclude Include="Inc\Framework\DrawPass\FilterCubeMapPass.h" />
     <ClInclude Include="Inc\Framework\DrawPass\ForwardRenderPass.h" />
     <ClInclude Include="Inc\Framework\DrawPass\HUDPass.h" />
     <ClInclude Include="Inc\Framework\DrawPass\ShadowMapPass.h" />
@@ -210,7 +209,16 @@
     <ClInclude Include="Inc\Framework\Math\NutMath.hpp" />
     <ClInclude Include="Inc\Framework\Parser\BMP.h" />
     <ClInclude Include="Inc\Framework\Parser\FbxParser.h" />
+    <ClInclude Include="Inc\Framework\Parser\HDR.h" />
     <ClInclude Include="Inc\Framework\Parser\JPEG.h" />
+    <ClInclude Include="Inc\Framework\Scene\SceneNode.h" />
+    <ClInclude Include="Inc\Framework\Scene\SceneObject.h" />
+    <ClInclude Include="Inc\Framework\Scene\SceneObjectCamera.h" />
+    <ClInclude Include="Inc\Framework\Scene\SceneObjectGeometry.h" />
+    <ClInclude Include="Inc\Framework\Scene\SceneObjectLight.h" />
+    <ClInclude Include="Inc\Framework\Scene\SceneObjectMaterial.h" />
+    <ClInclude Include="Inc\Framework\Scene\SceneObjectMesh.h" />
+    <ClInclude Include="Inc\Framework\Scene\SceneObjectTexture.h" />
     <ClInclude Include="Inc\Physics\MotionState.h" />
     <ClInclude Include="Inc\Physics\NutPhysicsManager.h" />
     <ClInclude Include="Inc\Physics\RigidBody.h" />
@@ -236,7 +244,6 @@
     <ClCompile Include="Src\Framework\Common\SceneManager.cpp" />
     <ClCompile Include="Src\Framework\Common\MemoryManager.cpp" />
     <ClCompile Include="Src\Framework\Common\Scene.cpp" />
-    <ClCompile Include="Src\Framework\Common\SceneObject.cpp" />
     <ClCompile Include="Src\Framework\Common\TimerManager.cpp" />
     <ClCompile Include="Src\Framework\DrawPass\ForwardRenderPass.cpp" />
     <ClCompile Include="Src\Framework\DrawPass\HUDPass.cpp" />
@@ -248,10 +255,25 @@
     <ClCompile Include="Src\Framework\Geometries\Sphere.cpp" />
     <ClCompile Include="Src\Framework\Math\Guid.cpp" />
     <ClCompile Include="Src\Framework\Parser\FbxParser.cpp" />
+    <ClCompile Include="Src\Framework\Parser\HDR.cpp" />
+    <ClCompile Include="Src\Framework\Parser\JEPG.cpp" />
+    <ClCompile Include="Src\Framework\Scene\SceneObjectCamera.cpp" />
+    <ClCompile Include="Src\Framework\Scene\SceneObjectMaterial.cpp" />
+    <ClCompile Include="Src\Framework\Scene\SceneObjectTexture.cpp" />
     <ClCompile Include="Src\Physics\NutPhysicsManager.cpp" />
     <ClCompile Include="Src\RHI\D3D12GraphicsManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="Asset\Shader\cs_test.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
+    </FxCompile>
     <FxCompile Include="Asset\Shader\ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
@@ -260,6 +282,18 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.0</ShaderModel>
     </FxCompile>
     <FxCompile Include="Asset\Shader\ps_debug.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\ps_filter_sb.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\ps_sample_sb.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
@@ -296,6 +330,12 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="Asset\Shader\vs_hud.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\vs_ori_sb.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>

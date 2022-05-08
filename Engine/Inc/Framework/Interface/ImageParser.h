@@ -7,5 +7,6 @@ namespace Engine
 	{
 	public:
 		virtual Image Parse(const Buffer& buf) = 0;
+		//virtual Image Parse(std::string path) = 0;
 	};
 }

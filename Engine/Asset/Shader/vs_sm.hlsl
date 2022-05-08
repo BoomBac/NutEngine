@@ -11,7 +11,7 @@ vs2_sm main(float3 position : POSITION)
 	if (g_light_mat_index < 100)
 		vp_matrix = lights[g_light_mat_index].light_vp;
 	else
-		vp_matrix =g_point_light_mat[g_light_mat_index - 100];
+		vp_matrix =g_point_light_mat[g_light_mat_index - 100 + 6];
 	ret.position = mul(float4(ret.postionW, 1.f), vp_matrix);
 	return ret;
 }

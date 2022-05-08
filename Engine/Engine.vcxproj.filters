@@ -76,6 +76,12 @@
     <Filter Include="Src\Framework\DrawPass">
       <UniqueIdentifier>{1cb042bc-07b9-4d95-ad6d-6d3e9bd7b09f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Inc\Framework\Scene">
+      <UniqueIdentifier>{beae9f3f-9cca-423f-ba0a-686a8cb78b0c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Src\Framework\Scene">
+      <UniqueIdentifier>{b34aaf1a-64d8-4804-9462-d6ae52ac2804}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -126,14 +132,8 @@
     <ClInclude Include="Inc\Framework\Interface\ImageParser.h">
       <Filter>Inc\Framework\Interface</Filter>
     </ClInclude>
-    <ClInclude Include="Inc\Framework\Common\SceneObject.h">
-      <Filter>Inc\Framework\Common</Filter>
-    </ClInclude>
     <ClInclude Include="Inc\Framework\Math\Guid.h">
       <Filter>Inc\Framework\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="Inc\Framework\Common\SceneNode.h">
-      <Filter>Inc\Framework\Common</Filter>
     </ClInclude>
     <ClInclude Include="Inc\Framework\Interface\ISceneParser.h">
       <Filter>Inc\Framework\Interface</Filter>
@@ -231,6 +231,36 @@
     <ClInclude Include="Inc\Framework\DrawPass\SkyBoxPass.h">
       <Filter>Inc\Framework\DrawPass</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\Framework\DrawPass\FilterCubeMapPass.h">
+      <Filter>Inc\Framework\DrawPass</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Scene\SceneObjectTexture.h">
+      <Filter>Inc\Framework\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Scene\SceneNode.h">
+      <Filter>Inc\Framework\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Scene\SceneObject.h">
+      <Filter>Inc\Framework\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Scene\SceneObjectMesh.h">
+      <Filter>Inc\Framework\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Scene\SceneObjectMaterial.h">
+      <Filter>Inc\Framework\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Scene\SceneObjectGeometry.h">
+      <Filter>Inc\Framework\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Scene\SceneObjectLight.h">
+      <Filter>Inc\Framework\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Scene\SceneObjectCamera.h">
+      <Filter>Inc\Framework\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\Framework\Parser\HDR.h">
+      <Filter>Inc\Framework\Parser</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -272,9 +302,6 @@
     <ClCompile Include="Src\Framework\Common\InputManager.cpp">
       <Filter>Src\Framework\Common</Filter>
     </ClCompile>
-    <ClCompile Include="Src\Framework\Common\SceneObject.cpp">
-      <Filter>Src\Framework\Common</Filter>
-    </ClCompile>
     <ClCompile Include="Src\Framework\Common\CameraManager.cpp">
       <Filter>Src\Framework\Common</Filter>
     </ClCompile>
@@ -314,6 +341,21 @@
     <ClCompile Include="Src\Framework\DrawPass\SkyBoxPass.cpp">
       <Filter>Src\Framework\DrawPass</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Framework\Scene\SceneObjectTexture.cpp">
+      <Filter>Src\Framework\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Scene\SceneObjectCamera.cpp">
+      <Filter>Src\Framework\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Scene\SceneObjectMaterial.cpp">
+      <Filter>Src\Framework\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Parser\JEPG.cpp">
+      <Filter>Src\Framework\Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\Framework\Parser\HDR.cpp">
+      <Filter>Src\Framework\Parser</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Asset\Shader\vs.hlsl">
@@ -344,6 +386,18 @@
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Asset\Shader\ps_sb.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\vs_ori_sb.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\ps_sample_sb.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\ps_filter_sb.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Asset\Shader\cs_test.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
   </ItemGroup>

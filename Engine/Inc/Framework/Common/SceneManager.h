@@ -1,4 +1,6 @@
-#pragma once
+#ifndef __SCENE_MGR_H__
+#define __SCENE_MGR_H__
+
 #include "Framework/Interface/IRuntimeModule.h"
 #include "Scene.h"
 
@@ -30,3 +32,6 @@ namespace Engine
     };
     extern SceneManager* g_pSceneManager;
 }
+#endif // !__SCENE_MGR_H__
+
+

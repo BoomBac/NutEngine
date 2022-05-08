@@ -24,7 +24,8 @@ cbuffer DrawFrameContext : register(b0)
 	float4 g_ambient_color_;
 	float3 g_camera_position_;
 	float padding;
-	float4x4 g_point_light_mat[12];
+	//first 0~5 use for defalut 6 face matrix for generate cube map
+	float4x4 g_point_light_mat[18];
 	Light lights[8];
 };
 
@@ -41,6 +42,7 @@ cbuffer DrawBatchContext : register(b1)
 cbuffer LightIndex : register(b2)
 {
 	int g_light_mat_index;
+	//use for calculate linear depth in ps_sm
 	int g_cur_light_index;
 };
 
@@ -48,7 +50,10 @@ cbuffer LightIndex : register(b2)
 Texture2D g_texture : register(t0);
 Texture2D g_shadow_map[6] : register(t1);
 TextureCube g_cube_shadow_map[2] : register(t7);
-TextureCube g_sky_box : register(t9);
+Texture2D g_spherical_map_env : register(t9);
+TextureCube g_cube_map_env : register(t10);
+TextureCube g_filtered_irridance_map : register(t11);
+
 
 SamplerState g_sampler : register(s0);
 

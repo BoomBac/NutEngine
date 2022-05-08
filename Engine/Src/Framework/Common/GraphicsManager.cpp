@@ -9,8 +9,6 @@
 #include "Framework/DrawPass/HUDPass.h"
 #include "Framework/DrawPass/SkyBoxPass.h"
 
-#include <directxmath.h>
-
 
 using namespace Engine;
 
@@ -121,6 +119,7 @@ int Engine::GraphicsManager::ParserConfig()
     }
     return ret;
 }
+
 void Engine::GraphicsManager::Present()
 {
 }
@@ -142,20 +141,16 @@ void Engine::GraphicsManager::DrawBatch(std::shared_ptr<DrawBatchContext> batch)
 {
 }
 
-void Engine::GraphicsManager::DrawSkyBox()
+void Engine::GraphicsManager::DrawSkyBox(int type)
 {
 
 }
 
-void Engine::GraphicsManager::GenerateShadowMapArray(UINT32 count)
-{
-
-}
-void Engine::GraphicsManager::BeginShadowMap(Light& light, int light_id, int point_light_id, int cube_map_id)
+void Engine::GraphicsManager::BeginShadowMap(int type, int light_id, bool init, int point_light_id, int cube_map_id)
 {
     b_regenerate_shadow_map_ = false;
 }
-void Engine::GraphicsManager::EndShadowMap(int light_index, bool is_point_light, int point_light_id)
+void Engine::GraphicsManager::EndShadowMap(int light_type)
 {
 }
 void Engine::GraphicsManager::EndShadowMap()
@@ -227,6 +222,16 @@ void Engine::GraphicsManager::EndFrame()
 void Engine::GraphicsManager::InitConstants()
 {
     BuildIdentityMatrix(frames_[frame_index_].frame_context.world_matrix_);
+
+    Matrix4x4f proj{};
+    BuildPerspectiveFovLHMatrix(proj, 0.5f * kPi, 1.f, 10.f, 10000.f);
+    Transpose(proj);
+    for (int j = 0; j < 6; ++j)
+    {
+        Matrix4x4f view{};
+        BuildViewMatrixLookToLH(view, Vector3f{0.f,0.f,0.f}, kForwardDirs[j], kUpDirs[j]);
+        frames_[frame_index_].frame_context.point_light_vp_mat[j] = proj * Transpose(view);
+    }
 }
 
 void Engine::GraphicsManager::CalculateCameraMatrix()
@@ -243,22 +248,6 @@ void Engine::GraphicsManager::CalculateCameraMatrix()
 
 void Engine::GraphicsManager::CalculateLights()
 {
-    static const Vector3f kForward[6]{ 
-        {1.f,0.f,0.f}, //+x
-        {-1.f,0.f,0.f}, //-x
-        {0.f,1.f,0.f}, //+y
-        {0.f,-1.f,0.f}, //-y
-        {0.f,0.f,1.f}, //+z
-        {0.f,0.f,-1.f}, //-z
-    };
-    static const Vector3f kUpDirs[6]{
-        {0.f,1.f,0.f}, //+x
-        {0.f,1.f,0.f}, //-x
-        {0.f,0.f,-1.f}, //+y
-        {0.f,0.f,1.f}, //-y
-        {0.f,1.f,0.f}, //+z
-        {0.f,1.f,0.f}, //-z
-    };
     auto& draw_frame_context_ = frames_[frame_index_].frame_context;
     auto& scene = g_pSceneManager->GetSceneForRendering();
     if(scene.GetFirstLightNode())
@@ -289,7 +278,6 @@ void Engine::GraphicsManager::CalculateLights()
                     single_light.vp_matrix_ = light_view * single_light.vp_matrix_;
                     single_light.type = 0;
                     single_light.light_instensity = light->GetIntensity() / 1000.f;
-                    draw_frame_context_.lights_[i++] = single_light;
                 }
                     break;
                 case Engine::ELightType::kPoint:
@@ -301,12 +289,12 @@ void Engine::GraphicsManager::CalculateLights()
                     for(int j = 0; j < 6; ++j)
                     {
                         auto world_pos = node.second->GetWorldPosition();
-                        BuildViewMatrixLookToLH(view_mat_for_shaodw_map, node.second->GetWorldPosition(),kForward[j],kUpDirs[j]);
-                        draw_frame_context_.point_light_vp_mat[j + point_light_count * 6] = proj_mat_for_shaodw_map * Transpose(view_mat_for_shaodw_map);
+                        BuildViewMatrixLookToLH(view_mat_for_shaodw_map, node.second->GetWorldPosition(), kForwardDirs[j],kUpDirs[j]);
+                        draw_frame_context_.point_light_vp_mat[6 + j + point_light_count * 6] = proj_mat_for_shaodw_map * Transpose(view_mat_for_shaodw_map);
                         view_mat_for_shaodw_map = {};
                     }
                     single_light.type = 1;
-                    draw_frame_context_.lights_[kMaxLightNum - kMaxPointLightNum + point_light_count++] = single_light;
+                    ++point_light_count;
                 }
                     break;
                 case Engine::ELightType::kSpot:
@@ -318,13 +306,12 @@ void Engine::GraphicsManager::CalculateLights()
                     single_light.inner_angle = spot_light->inner_angle_;
                     single_light.outer_angle = spot_light->outer_angle_;
                     single_light.vp_matrix_ = light_view * single_light.vp_matrix_;
-                    draw_frame_context_.lights_[i++] = single_light;
                 }
                     break;
                 default:
                     break;
                 }
-
+                draw_frame_context_.lights_[i++] = single_light;
             }
         }
     }

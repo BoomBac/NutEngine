@@ -25,13 +25,15 @@ namespace Engine
 
 		virtual void DrawBatch(const std::vector<std::shared_ptr<DrawBatchContext>>& batches);
 		virtual void DrawBatch(std::shared_ptr<DrawBatchContext> batch);
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="type">0 for display 1 for filter cube_map</param>
+		virtual void DrawSkyBox(int type = 0);
 
-		virtual void DrawSkyBox();
+		virtual void BeginShadowMap(int type, int light_id, bool init = false,int point_light_id = -1, int cube_map_id = -1);
 
-		virtual void GenerateShadowMapArray(UINT32 count);
-		virtual void BeginShadowMap(Light& light, int light_id, int point_light_id = 0, int cube_map_id = 0);
-
-		virtual void EndShadowMap(int light_index, bool is_point_light = false, int point_light_id = 0);
+		virtual void EndShadowMap(int light_type);
 		virtual void EndShadowMap();
 
 		virtual void SetShadowMap();
@@ -75,9 +77,26 @@ namespace Engine
 	protected:					
 		static constexpr uint32_t           kFrameCount = 2;
 		static constexpr uint32_t           kMaxSceneObjectCount = 65535;
-		static constexpr uint32_t           kMaxTextureCount = 2048;
+		static constexpr uint32_t           kMaxTextureCount = 128;
 		static constexpr uint32_t           kMaxShadowMapCount = (kMaxLightNum - kMaxPointLightNum) + kMaxPointLightNum * 6;
-		static constexpr uint32_t           kDefalutCubeShadowMapSize = 1024;
+		static constexpr uint32_t           kDefalutCubeMapSize = 1024;
+
+		inline static const Vector3f kForwardDirs[6]{
+			{1.f,0.f,0.f}, //+x
+			{-1.f,0.f,0.f}, //-x
+			{0.f,1.f,0.f}, //+y
+			{0.f,-1.f,0.f}, //-y
+			{0.f,0.f,1.f}, //+z
+			{0.f,0.f,-1.f}, //-z
+		};
+		inline static const Vector3f kUpDirs[6]{
+			{0.f,1.f,0.f}, //+x
+			{0.f,1.f,0.f}, //-x
+			{0.f,0.f,-1.f}, //+y
+			{0.f,0.f,1.f}, //-y
+			{0.f,1.f,0.f}, //+z
+			{0.f,1.f,0.f}, //-z
+		};
 
 		bool b_use_env_light_ = true;
 		bool b_use_shadow_ = true;

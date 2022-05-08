@@ -4,7 +4,14 @@
 
 namespace Engine
 {
-	enum class EImageFormat{kNutformatR8G8B8,kNutformatR8G8B8A8};
+	enum class EImageFormat{
+		kNutFormatR8G8B8,
+		kNutFormatR8G8B8A8,
+		kNutFormatR16G16B16A16,
+		kNutFormatR16G16B16,
+		kNutFormatR32G32B32A32,
+		kNutFormatR32G32B32,
+	};
 	struct Image
 	{
 		uint32_t width;

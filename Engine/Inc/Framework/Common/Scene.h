@@ -1,5 +1,8 @@
-#pragma once
-#include "Framework/Common/SceneNode.h"
+#ifndef __SCENE_H__
+#define __SCENE_H__
+
+#include "Framework/Scene/SceneNode.h"
+#include "Framework/Scene/SceneObjectMaterial.h"
 
 namespace Engine
 {
@@ -42,3 +45,6 @@ namespace Engine
         std::shared_ptr<SceneObjectMaterial> p_default_material_;
     };
 }
+
+#endif // !__SCENE_H__
+

@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "RHI/D3D12GrahpicsManager.h"
 #include "Framework/Interface/IApplication.h"
-
 #include "Framework/Common/AssetLoader.h"
 #include "Framework/Common/SceneManager.h"
 #include "Framework/Common/Log.h"
@@ -47,6 +46,7 @@ namespace Engine
 		if (!result)
 		{
 			const GfxConfiguration& config = g_pApp->GetConfiguration();
+			textures_.resize(kMaxTextureCount);
 			vp_ = { 0.0f, 0.0f, static_cast<float>(config.viewport_width_), static_cast<float>(config.viewport_height_), 0.0F, 1.0F };
 			rect_ = { 0, 0, static_cast<LONG>(config.viewport_width_), static_cast<LONG>(config.viewport_height_) };
 			vertex_data_debug_ = new Vector3f[2048];
@@ -292,7 +292,8 @@ namespace Engine
 		auto texture_index = texture_index_["shadow_map"];
 		D3D12_GPU_DESCRIPTOR_HANDLE srvHandle;
 		srvHandle.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_index) * cbv_srv_uav_desc_size_;
-		p_cmdlist_->SetGraphicsRootDescriptorTable(2, srvHandle);
+		if(b_use_shadow_ && frames_[0].shadow_map_count > 0)
+			p_cmdlist_->SetGraphicsRootDescriptorTable(2, srvHandle);
 		p_cmdlist_->IASetVertexBuffers(0, 2, &vertex_buf_view_hud_[0]);
 		p_cmdlist_->SetPipelineState(p_plstate_hud_.Get());
 		p_cmdlist_->DrawInstanced(6,1,0,0);
@@ -488,19 +489,44 @@ namespace Engine
 			}
 		}
 		NE_LOG(ALL, kNormal, "Done")
+
+		NE_LOG(ALL, kNormal, "Create shadow map buffer for light...")
+		for(int i = 0; i < kMaxLightNum - kMaxPointLightNum; ++i)
+			shadow_map_pool_.push(CreateRenderTextureBuffer(true, false));
+		for(int i = 0; i < kMaxPointLightNum; ++i)
+			cube_shadow_map_pool_.push(CreateRenderTextureBuffer(true, true));
+		NE_LOG(ALL, kNormal, "Done")
+		for(auto& it : scene.LightNodes)
+		{
+			if(auto light = scene.GetLight(it.second->GetSceneObjectRef());light != nullptr)
+			{
+				if(light->GetType() == ELightType::kPoint)
+				{
+					light_shadow_maps_[light->GetName()] = cube_shadow_map_pool_.front();
+					cube_shadow_map_pool_.pop();
+				}
+				else
+				{
+					light_shadow_maps_[light->GetName()] = shadow_map_pool_.front();
+					shadow_map_pool_.pop();
+				}
+			}
+		}
 		if(b_use_env_light_)
 		{
 			NE_LOG(ALL, kNormal, "Begin create SkyBox")
 			std::vector<std::string> path_list;
-			path_list.emplace_back("H:/Project_VS2019/NutEngine/Engine/Asset/env_img/right.jpg");
-			path_list.emplace_back("H:/Project_VS2019/NutEngine/Engine/Asset/env_img/left.jpg");
-			path_list.emplace_back("H:/Project_VS2019/NutEngine/Engine/Asset/env_img/top.jpg");
-			path_list.emplace_back("H:/Project_VS2019/NutEngine/Engine/Asset/env_img/bottom.jpg");
-			path_list.emplace_back("H:/Project_VS2019/NutEngine/Engine/Asset/env_img/front.jpg");
-			path_list.emplace_back("H:/Project_VS2019/NutEngine/Engine/Asset/env_img/back.jpg");
+			path_list.emplace_back("env_img/right.jpg");
+			path_list.emplace_back("env_img/left.jpg");
+			path_list.emplace_back("env_img/top.jpg");
+			path_list.emplace_back("env_img/bottom.jpg");
+			path_list.emplace_back("env_img/front.jpg");
+			path_list.emplace_back("env_img/back.jpg");
 			ThrowIfFailed(CreateCubeTextureBuffer(path_list));
-			NE_LOG(ALL, kNormal, "Done")
+			SceneObjectTexture hdr_map("env_img/Eden_REF.hdr");
+			CreateTextureBuffer(hdr_map);
 			CreateSkyBoxBuffer();
+			NE_LOG(ALL, kNormal, "Done")
 		}
 		if (SUCCEEDED(p_cmdlist_->Close()))
 		{
@@ -539,6 +565,13 @@ namespace Engine
 
 	void D3d12GraphicsManager::BeginFrame()
 	{
+		//temp check for task need to do
+		static bool task = false;
+		if(!task && b_use_env_light_)
+		{
+			GenerateIBLMap();
+			task = true;
+		}
 		ResetCommandList();
 		// Indicate that the back buffer will be used as a render target.
 		auto barrier_back_buffer = CD3DX12_RESOURCE_BARRIER::Transition(render_target_arr_[frame_index_].Get(),
@@ -563,7 +596,9 @@ namespace Engine
 		//set sky_box
 		if(b_use_env_light_)
 		{
-			p_cmdlist_->SetGraphicsRootDescriptorTable(7, env_map_handle_);
+			//p_cmdlist_->SetGraphicsRootDescriptorTable(7, env_map_handle_);			
+			rtt_handles_[cube_map_sky_box_handle_].BindToPineline(p_cmdlist_.Get(), 8);
+			rtt_handles_[irridance_map_handle_].BindToPineline(p_cmdlist_.Get(), 9);
 		}
 		//set cbv for per frame
 		D3D12_GPU_DESCRIPTOR_HANDLE cbv_handle;
@@ -583,87 +618,8 @@ namespace Engine
 		p_cmdqueue_->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 	}
 	
-	void D3d12GraphicsManager::GenerateShadowMapArray(UINT32 count)
+	void D3d12GraphicsManager::InitializeShadowMapPSO()
 	{
-		INT32 dsv_offset = 1;
-		shadow_map_tart_ = textures_.size();
-		for(int i = 0; i < count; ++i)
-		{
-			ComPtr<ID3D12Resource> p_shadow_map = nullptr;
-			D3D12_RESOURCE_DESC textureDesc = {};
-			textureDesc.MipLevels = 1;
-			if(i < count - kMaxPointLightNum)
-			{
-				textureDesc.Width = g_pApp->GetConfiguration().viewport_width_;
-				textureDesc.Height = g_pApp->GetConfiguration().viewport_height_;
-				textureDesc.DepthOrArraySize = 1;
-			}
-			else
-			{
-				textureDesc.Width = kDefalutCubeShadowMapSize;
-				textureDesc.Height = kDefalutCubeShadowMapSize;
-				textureDesc.DepthOrArraySize = 6;
-			}
-			textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-			textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-			textureDesc.SampleDesc.Count = 1;
-			textureDesc.SampleDesc.Quality = 0;
-			textureDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-			textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-			textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-			D3D12_CLEAR_VALUE optClear;
-			optClear.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-			optClear.DepthStencil.Depth = 1.0f;
-			optClear.DepthStencil.Stencil = 0;
-			CD3DX12_HEAP_PROPERTIES heap_prop(D3D12_HEAP_TYPE_DEFAULT);
-			ThrowIfFailed(p_device_->CreateCommittedResource(&heap_prop, D3D12_HEAP_FLAG_NONE, &textureDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
-				&optClear, IID_PPV_ARGS(p_shadow_map.GetAddressOf())));
-
-			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-
-			srvDesc.Texture2D.MostDetailedMip = 0;
-			srvDesc.Texture2D.MipLevels = 1;
-			srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-			srvDesc.Texture2D.PlaneSlice = 0;
-
-			if (i < count - kMaxPointLightNum)
-			{
-				srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-				D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
-				dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-				dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-				dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-				dsvDesc.Texture2D.MipSlice = 0;
-				D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle;
-				dsvHandle.ptr = p_dsv_heap_->GetCPUDescriptorHandleForHeapStart().ptr + dsv_desc_size_ * (dsv_offset++);
-				p_device_->CreateDepthStencilView(p_shadow_map.Get(), &dsvDesc, dsvHandle);
-			}
-			else
-			{
-				for(int j = 0; j < 6; ++j)
-				{
-					D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
-					dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-					dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-					dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
-					dsvDesc.Texture2DArray.MipSlice = 0;
-					dsvDesc.Texture2DArray.FirstArraySlice = j;
-					dsvDesc.Texture2DArray.ArraySize = 1;
-					D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle;
-					dsvHandle.ptr = p_dsv_heap_->GetCPUDescriptorHandleForHeapStart().ptr + dsv_desc_size_ * (dsv_offset++);
-					p_device_->CreateDepthStencilView(p_shadow_map.Get(), &dsvDesc, dsvHandle);
-				}
-				srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-			}
-			D3D12_CPU_DESCRIPTOR_HANDLE srvHandle;
-			int32_t texture_id = textures_.size();
-			srvHandle.ptr = p_cbv_heap_->GetCPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_id) * cbv_srv_uav_desc_size_;
-			p_device_->CreateShaderResourceView(p_shadow_map.Get(), &srvDesc, srvHandle);
-			textures_.push_back(p_shadow_map);
-		}
-		cube_shadow_map_start_ = textures_.size() - kMaxPointLightNum;
 		// load the shaders
 		const char* vs_filename = "Shader/vs_sm.cso";
 		const char* fs_filename = "Shader/ps_sm.cso";
@@ -681,8 +637,6 @@ namespace Engine
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		};
 		vertex_buf_per_frame_num_ = _countof(ied);
-		//TODO: Create D3D12_RASTERIZER_DESC D3D12_RENDER_TARGET_BLEND_DESC D3D12_BLEND_DESC D3D12_DEPTH_STENCILOP_DESC D3D12_DEPTH_STENCIL_DESC
-		//Create DepthSenticil Desc
 		const D3D12_DEPTH_STENCILOP_DESC defaultStencilOp = { D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_COMPARISON_FUNC_ALWAYS };
 		D3D12_DEPTH_STENCIL_DESC dsd = { TRUE,D3D12_DEPTH_WRITE_MASK_ALL,D3D12_COMPARISON_FUNC_LESS,FALSE,D3D12_DEFAULT_STENCIL_READ_MASK,
 			D3D12_DEFAULT_STENCIL_WRITE_MASK,defaultStencilOp, defaultStencilOp };
@@ -704,54 +658,255 @@ namespace Engine
 		p_device_->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&p_plstate_sm_));
 	}
 
-	void D3d12GraphicsManager::BeginShadowMap(Light& light, int light_id,int point_light_id,int cube_map_id) //
+	D3d12GraphicsManager::RTTHandle D3d12GraphicsManager::CreateRenderTextureBuffer(bool depth_only, bool is_cube,bool is_float)
 	{
-		GraphicsManager::BeginShadowMap(light, light_id);
-		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(p_dsv_heap_->GetCPUDescriptorHandleForHeapStart());
-		int buf_upload[2]{};
-		if (light.type == 1)
+		RTTInfo info{};
+		if(depth_only)
 		{
-			if(cube_map_id == 0)
+			static uint32_t cur_dsv_offset = kFrameCount;
+			static uint32_t shadow_map_offset = 0;
+			static uint32_t cube_shadow_map_offset = 0;
+			ComPtr<ID3D12Resource> p_shadow_map = nullptr;
+			D3D12_RESOURCE_DESC tex_desc{};
+			tex_desc.MipLevels = 1;
+			if(!is_cube)
 			{
-				D3D12_VIEWPORT vp{ 0.f,0.f,kDefalutCubeShadowMapSize,kDefalutCubeShadowMapSize,0.f,1.f };
-				D3D12_RECT rect{0,0,kDefalutCubeShadowMapSize,kDefalutCubeShadowMapSize };
-				p_cmdlist_->RSSetViewports(1, &vp);
-				p_cmdlist_->RSSetScissorRects(1,&rect);
+				tex_desc.Width = g_pApp->GetConfiguration().viewport_width_;
+				tex_desc.Height = g_pApp->GetConfiguration().viewport_height_;
+				tex_desc.DepthOrArraySize = 1;
 			}
-			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textures_[cube_shadow_map_start_ + point_light_id].Get(),
-			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-			p_cmdlist_->ResourceBarrier(1, &barrier);
-			dsvHandle.Offset(dsv_desc_size_ * (kMaxLightNum - kMaxPointLightNum + 1 + cube_map_id + (point_light_id * 6)));
+			else
+			{
+				tex_desc.Width = kDefalutCubeMapSize;
+				tex_desc.Height = kDefalutCubeMapSize;
+				tex_desc.DepthOrArraySize = 6;
+			}
+			tex_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+			tex_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+			tex_desc.SampleDesc.Count = 1;
+			tex_desc.SampleDesc.Quality = 0;
+			tex_desc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+			tex_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+			tex_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+			D3D12_CLEAR_VALUE clear_var;
+			clear_var.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			clear_var.DepthStencil.Depth = 1.0f;
+			clear_var.DepthStencil.Stencil = 0;
+
+			CD3DX12_HEAP_PROPERTIES heap_prop(D3D12_HEAP_TYPE_DEFAULT);
+			ThrowIfFailed(p_device_->CreateCommittedResource(&heap_prop, D3D12_HEAP_FLAG_NONE, &tex_desc, D3D12_RESOURCE_STATE_GENERIC_READ,
+				&clear_var, IID_PPV_ARGS(p_shadow_map.GetAddressOf())));
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+			srv_desc.Texture2D.MostDetailedMip = 0;
+			srv_desc.Texture2D.MipLevels = 1;
+			srv_desc.Texture2D.ResourceMinLODClamp = 0.0f;
+			srv_desc.Texture2D.PlaneSlice = 0;
+			info.dsv_start = cur_dsv_offset;
+			if(!is_cube)
+			{
+				info.dsc_num = 1;
+				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+				D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
+				dsv_desc.Flags = D3D12_DSV_FLAG_NONE;
+				dsv_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+				dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+				dsv_desc.Texture2D.MipSlice = 0;
+				D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle;
+				dsv_handle.ptr = p_dsv_heap_->GetCPUDescriptorHandleForHeapStart().ptr + dsv_desc_size_ * (cur_dsv_offset++);
+				p_device_->CreateDepthStencilView(p_shadow_map.Get(), &dsv_desc, dsv_handle);
+			}
+			else
+			{
+				info.dsc_num = 6;
+				for (int j = 0; j < 6; ++j)
+				{
+					D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
+					dsv_desc.Flags = D3D12_DSV_FLAG_NONE;
+					dsv_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+					dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+					dsv_desc.Texture2DArray.MipSlice = 0;
+					dsv_desc.Texture2DArray.FirstArraySlice = j;
+					dsv_desc.Texture2DArray.ArraySize = 1;
+					D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle;
+					dsv_handle.ptr = p_dsv_heap_->GetCPUDescriptorHandleForHeapStart().ptr + dsv_desc_size_ * (cur_dsv_offset++);
+					p_device_->CreateDepthStencilView(p_shadow_map.Get(), &dsv_desc, dsv_handle);
+				}
+				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+			}
+			D3D12_CPU_DESCRIPTOR_HANDLE srv_handle;
+			UINT32 texture_id{0};
+			if(is_cube)
+			{
+				texture_id = kCubeShadowMapStart + cube_shadow_map_offset++;
+				srv_handle.ptr = p_cbv_heap_->GetCPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_id)
+					* cbv_srv_uav_desc_size_;
+			}
+			else
+			{
+				texture_id = kShadowMapStart + shadow_map_offset++;
+				srv_handle.ptr = p_cbv_heap_->GetCPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_id)
+					* cbv_srv_uav_desc_size_;
+			}
+			p_device_->CreateShaderResourceView(p_shadow_map.Get(), &srv_desc, srv_handle);
+			textures_[texture_id] = p_shadow_map;
+			info.texture_id = texture_id;
+			info.srv_ptr = p_cbv_heap_->GetCPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_id)
+				* cbv_srv_uav_desc_size_;
+			rtt_handles_.emplace_back(info);
+			return rtt_handles_.size()-1;
+		}
+		else
+		{
+			DXGI_FORMAT format{};
+			if(is_float)
+				format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			else
+				format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			static int cur_rtv_offset = kFrameCount;
+			static int texture_offset = 0;
+			ComPtr<ID3D12Resource> p_buffer = nullptr;
+			D3D12_RESOURCE_DESC tex_desc{};
+			tex_desc.MipLevels = 1;
+			if (!is_cube)
+			{
+				tex_desc.Width = g_pApp->GetConfiguration().viewport_width_;
+				tex_desc.Height = g_pApp->GetConfiguration().viewport_height_;
+				tex_desc.DepthOrArraySize = 1;
+			}
+			else
+			{
+				tex_desc.Width = kDefalutCubeMapSize;
+				tex_desc.Height = kDefalutCubeMapSize;
+				tex_desc.DepthOrArraySize = 6;
+			}
+			tex_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+			tex_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+			tex_desc.SampleDesc.Count = 1;
+			tex_desc.SampleDesc.Quality = 0;
+			tex_desc.Format = format;
+			tex_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+			tex_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+			D3D12_CLEAR_VALUE clear_var{};
+			clear_var.Format = tex_desc.Format;
+			memcpy(&clear_var.Color, kBackColor, sizeof(FLOAT) * 4);
+
+			CD3DX12_HEAP_PROPERTIES heap_prop(D3D12_HEAP_TYPE_DEFAULT);
+			ThrowIfFailed(p_device_->CreateCommittedResource(&heap_prop, D3D12_HEAP_FLAG_NONE, &tex_desc, D3D12_RESOURCE_STATE_GENERIC_READ,
+				&clear_var, IID_PPV_ARGS(p_buffer.GetAddressOf())));
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv_desc.Format = tex_desc.Format;
+			info.rtv_start = cur_rtv_offset;
+			if(!is_cube)
+			{
+				info.dsc_num = 1;
+				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+				srv_desc.Texture2D.MostDetailedMip = 0;
+				srv_desc.Texture2D.MipLevels = 1;
+				srv_desc.Texture2D.ResourceMinLODClamp = 0.0f;
+				srv_desc.Texture2D.PlaneSlice = 0;
+				D3D12_RENDER_TARGET_VIEW_DESC rtv_desc{};
+				rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+				rtv_desc.Format = tex_desc.Format;
+				rtv_desc.Texture2D.MipSlice = 0;
+				rtv_desc.Texture2D.PlaneSlice = 0;
+				CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(p_rtv_heap_->GetCPUDescriptorHandleForHeapStart());
+				rtv_handle.Offset((cur_rtv_offset++)* rtv_desc_size_);
+				p_device_->CreateRenderTargetView(p_buffer.Get(), &rtv_desc, rtv_handle);
+			}
+			else
+			{
+				info.dsc_num = 6;
+				srv_desc.TextureCube.MostDetailedMip = 0;
+				srv_desc.TextureCube.MipLevels = 1;
+				srv_desc.TextureCube.ResourceMinLODClamp = 0.f;
+				for (int i = 0; i < 6; ++i)
+				{
+					D3D12_RENDER_TARGET_VIEW_DESC rtv_desc{};
+					rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+					rtv_desc.Format = tex_desc.Format;
+					rtv_desc.Texture2DArray.MipSlice = 0;
+					rtv_desc.Texture2DArray.FirstArraySlice = i;
+					rtv_desc.Texture2DArray.ArraySize = 1;
+					CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(p_rtv_heap_->GetCPUDescriptorHandleForHeapStart());
+					rtv_handle.Offset((cur_rtv_offset++) * rtv_desc_size_);
+					p_device_->CreateRenderTargetView(p_buffer.Get(), &rtv_desc, rtv_handle);
+				}
+				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+			}
+			D3D12_CPU_DESCRIPTOR_HANDLE srv_handle;
+			UINT32 texture_id{ 0 };
+			texture_id = kReserverTextureStart + texture_offset++;
+			srv_handle.ptr = p_cbv_heap_->GetCPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_id) * cbv_srv_uav_desc_size_;
+			p_device_->CreateShaderResourceView(p_buffer.Get(), &srv_desc, srv_handle);
+			textures_[texture_id] = p_buffer;
+			info.texture_id = texture_id;
+			info.srv_ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_id) * cbv_srv_uav_desc_size_;
+			rtt_handles_.emplace_back(info);
+			return rtt_handles_.size() - 1;
+		}
+		return -1;
+	}
+
+	void D3d12GraphicsManager::BeginShadowMap(int type, int light_id, bool init, int point_light_id, int cube_map_id) //
+	{
+		GraphicsManager::BeginShadowMap(type, light_id);
+		RTTHandle handle = type >> 2;
+		auto& info = rtt_handles_[handle];
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(p_dsv_heap_->GetCPUDescriptorHandleForHeapStart());
+		int light_type = type & 0x03;
+		int buf_upload[2]{};
+		if(init)
+		{
+			if (light_type == 1)
+			{
+				if(cube_map_id == 0)
+				{
+					D3D12_VIEWPORT vp{ 0.f,0.f,kDefalutCubeMapSize,kDefalutCubeMapSize,0.f,1.f };
+					D3D12_RECT rect{ 0,0,kDefalutCubeMapSize,kDefalutCubeMapSize };
+					p_cmdlist_->RSSetViewports(1, &vp);
+					p_cmdlist_->RSSetScissorRects(1, &rect);
+				}
+			}
+			else
+			{
+				p_cmdlist_->RSSetViewports(1, &vp_);
+				p_cmdlist_->RSSetScissorRects(1, &rect_);
+			}
+		}
+		if (light_type == 1)
+		{
+
+			dsvHandle.Offset(dsv_desc_size_ * (info.dsv_start + cube_map_id));
 			buf_upload[0] = 100 + cube_map_id + (point_light_id * 6);
 		}
 		else
 		{
-			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textures_[shadow_map_tart_ + light_id].Get(),
-				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-			p_cmdlist_->ResourceBarrier(1, &barrier);
-			dsvHandle.Offset(dsv_desc_size_ * (light_id + 1));
+			dsvHandle.Offset(dsv_desc_size_ * info.dsv_start);
 			buf_upload[0] = light_id;
 		}
 		buf_upload[1] = light_id;
+		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textures_[info.texture_id].Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+		p_cmdlist_->ResourceBarrier(1, &barrier);
 		p_cmdlist_->SetGraphicsRoot32BitConstants(4, 2, reinterpret_cast<const void*>(&buf_upload), 0);
 		p_cmdlist_->ClearDepthStencilView(dsvHandle,D3D12_CLEAR_FLAG_DEPTH,1.f,0,0,nullptr);
 		p_cmdlist_->OMSetRenderTargets(0,nullptr,false,&dsvHandle);
 		p_cmdlist_->SetPipelineState(p_plstate_sm_.Get());
 	}
 
-	void D3d12GraphicsManager::EndShadowMap(int light_index, bool is_point_light,int point_light_id)
+	void D3d12GraphicsManager::EndShadowMap(int light_type)
 	{
-		if(is_point_light)
-		{
-			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textures_[cube_shadow_map_start_ + point_light_id].Get(),
-				D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ);
-			p_cmdlist_->ResourceBarrier(1, &barrier);
-		}
-		else
-		{
-			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textures_[shadow_map_tart_ + light_index].Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ);
-			p_cmdlist_->ResourceBarrier(1, &barrier);
-		}
+		RTTHandle handle = light_type >> 2;
+		auto& info = rtt_handles_[handle];
+		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textures_[info.texture_id].Get(),
+			D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ);
+		p_cmdlist_->ResourceBarrier(1, &barrier);
 	}
 
 	void D3d12GraphicsManager::EndShadowMap()
@@ -767,11 +922,11 @@ namespace Engine
 
 	void D3d12GraphicsManager::SetShadowMap()
 	{
-		auto texture_index = shadow_map_tart_;
+		auto texture_index = kShadowMapStart;
 		D3D12_GPU_DESCRIPTOR_HANDLE srvHandle;
-		srvHandle.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_index) * cbv_srv_uav_desc_size_;
+		srvHandle.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex) * cbv_srv_uav_desc_size_;
 		p_cmdlist_->SetGraphicsRootDescriptorTable(5, srvHandle);
-		srvHandle.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + shadow_map_tart_ + cube_shadow_map_start_) * cbv_srv_uav_desc_size_;
+		srvHandle.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + kShadowMapStart + kCubeShadowMapStart) * cbv_srv_uav_desc_size_;
 		p_cmdlist_->SetGraphicsRootDescriptorTable(6, srvHandle);
 	}
 
@@ -782,11 +937,141 @@ namespace Engine
 		SetPerFrameConstants(draw_frame_context_);
 	}
 
-	void D3d12GraphicsManager::DrawSkyBox()
+	void D3d12GraphicsManager::CalculateLights()
+	{
+		GraphicsManager::CalculateLights();
+		auto& draw_frame_context_ = frames_[frame_index_].frame_context;
+		auto& scene = g_pSceneManager->GetSceneForRendering();
+		int i = 0;
+		if (scene.GetFirstLightNode())
+		{
+			for (auto& node : scene.LightNodes)
+			{
+				if (auto light = scene.GetLight(node.second->GetSceneObjectRef()); light != nullptr)
+				{
+					RTTHandle handle = light_shadow_maps_[light->GetName()];
+					handle = handle << 2;
+					draw_frame_context_.lights_[i++].type |= handle;
+				}
+			}
+		}
+	}
+
+	void D3d12GraphicsManager::GenerateIBLMap()
+	{
+		ResetCommandList();
+		cube_map_sky_box_handle_ = CreateRenderTextureBuffer(false, true,true);
+		irridance_map_handle_ = CreateRenderTextureBuffer(false, true, true);
+		for (int i = 0; i < 6; ++i)
+		{
+			BeginSkyBox(i,0);
+			DrawSkyBox(1);
+			EndSkyBox(i,0);
+		}
+		for (int i = 0; i < 6; ++i)
+		{
+			BeginSkyBox(i, 1);
+			DrawSkyBox(1);
+			EndSkyBox(i, 1);
+		}
+		p_cmdlist_->Close();
+		ID3D12CommandList* ppCommandLists[] = { p_cmdlist_.Get() };
+		p_cmdqueue_->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+		WaitForPreviousFrame();
+	}
+
+	void D3d12GraphicsManager::BeginSkyBox(int cube_id, int type)
+	{
+		if (cube_id == 0)
+		{
+			////Set necessary state
+			p_cmdlist_->SetGraphicsRootSignature(p_rootsig_.Get());
+			ID3D12DescriptorHeap* ppHeaps[] = { p_cbv_heap_.Get(),p_sampler_heap_.Get() };
+			p_cmdlist_->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+			p_cmdlist_->SetGraphicsRootDescriptorTable(3, p_sampler_heap_->GetGPUDescriptorHandleForHeapStart());
+			p_cmdlist_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			//set cbv for per frame
+			D3D12_GPU_DESCRIPTOR_HANDLE cbv_handle;
+			uint32_t frame_res_desc_offset = frame_index_ * (1 + kMaxSceneObjectCount);
+			cbv_handle.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + frame_res_desc_offset * cbv_srv_uav_desc_size_;
+			p_cmdlist_->SetGraphicsRootDescriptorTable(0, cbv_handle);
+
+			D3D12_VIEWPORT vp{ 0.f,0.f,kDefalutCubeMapSize,kDefalutCubeMapSize,0.f,1.f };
+			D3D12_RECT rect{ 0,0,kDefalutCubeMapSize,kDefalutCubeMapSize };
+			p_cmdlist_->RSSetViewports(1, &vp);
+			p_cmdlist_->RSSetScissorRects(1, &rect);
+		}
+		auto& info = rtt_handles_[cube_map_sky_box_handle_];
+		//generate sky box cube map  form scene,the source maybe load form file
+		if(type == 0)
+		{
+			auto texture_index = texture_index_["Eden_REF.hdr"];
+			D3D12_GPU_DESCRIPTOR_HANDLE srvHandle;
+			srvHandle.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_index) * cbv_srv_uav_desc_size_;
+			p_cmdlist_->SetGraphicsRootDescriptorTable(7, srvHandle);
+
+			p_cmdlist_->SetPipelineState(p_plstate_sample_sb_.Get());
+			CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(p_rtv_heap_->GetCPUDescriptorHandleForHeapStart());
+			rtv_handle.Offset(rtv_desc_size_ * (info.rtv_start + cube_id));
+			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textures_[info.texture_id].Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			p_cmdlist_->ResourceBarrier(1, &barrier);
+			p_cmdlist_->ClearRenderTargetView(rtv_handle, kBackColor, 0, nullptr);
+			p_cmdlist_->OMSetRenderTargets(1, &rtv_handle, false, nullptr);
+		}
+		else if(type == 1)	//filter skybox cubemap for diffuse IBL
+		{
+			info.BindToPineline(p_cmdlist_.Get(),8);
+			p_cmdlist_->SetPipelineState(p_plstate_filter_cube_map_.Get());
+			auto& irridance_handle = rtt_handles_[irridance_map_handle_];
+			CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(p_rtv_heap_->GetCPUDescriptorHandleForHeapStart());
+			rtv_handle.Offset(rtv_desc_size_ * (irridance_handle.rtv_start + cube_id));
+			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textures_[irridance_handle.texture_id].Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			p_cmdlist_->ResourceBarrier(1, &barrier);
+			p_cmdlist_->ClearRenderTargetView(rtv_handle, kBackColor, 0, nullptr);
+			p_cmdlist_->OMSetRenderTargets(1, &rtv_handle, false, nullptr);
+		}
+		int buf_upload[2]{};
+		buf_upload[0] = cube_id;
+		p_cmdlist_->SetGraphicsRoot32BitConstants(4, 2, reinterpret_cast<const void*>(&buf_upload), 0);
+	}
+
+	void D3d12GraphicsManager::EndSkyBox(int cube_id, int type)
+	{
+		RTTInfo* info = nullptr;
+		if (type == 0)
+		{
+			info = &rtt_handles_[cube_map_sky_box_handle_];
+			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textures_[info->texture_id].Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
+			p_cmdlist_->ResourceBarrier(1, &barrier);	
+		}
+		else if (type == 1)
+		{
+			info = &rtt_handles_[irridance_map_handle_];
+			auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textures_[info->texture_id].Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
+			p_cmdlist_->ResourceBarrier(1, &barrier);
+		}
+		if(cube_id == 5)
+		{
+			p_cmdlist_->RSSetViewports(1, &vp_);
+			p_cmdlist_->RSSetScissorRects(1, &rect_);
+			p_cmdlist_->SetPipelineState(p_plstate_.Get());
+			CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(p_rtv_heap_->GetCPUDescriptorHandleForHeapStart(), frame_index_, rtv_desc_size_);
+			CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(p_dsv_heap_->GetCPUDescriptorHandleForHeapStart());
+			p_cmdlist_->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+			D3D12_GPU_DESCRIPTOR_HANDLE srv_handle;
+			srv_handle.ptr = info->srv_ptr;
+			p_cmdlist_->SetGraphicsRootDescriptorTable(7, srv_handle);
+		}
+	}
+
+	void D3d12GraphicsManager::DrawSkyBox(int type)
 	{
 		p_cmdlist_->IASetVertexBuffers(0,1,&vertex_buf_view_[sky_box_dbc_.vertex_buf_start]);
 		p_cmdlist_->IASetIndexBuffer(&index_buf_view_[0]);
-		p_cmdlist_->SetPipelineState(p_plstate_skybox_.Get());
+		if(type == 0)
+			p_cmdlist_->SetPipelineState(p_plstate_skybox_.Get());
 		p_cmdlist_->DrawIndexedInstanced(36,1,0,0,0);
 	}
 
@@ -860,7 +1145,7 @@ namespace Engine
 
 	void D3d12GraphicsManager::CreateSkyBoxBuffer()
 	{
-		float size = 1000.f;
+		float size = 5000.f;
 		Vector3f pos_screen[8]{ {size, size, size},{size, size, -size},{-size, size, -size},{-size, size, size},{size, -size, size}
 ,{size, -size, -size},{-size, -size, -size},{-size, -size, size} };
 		SceneObjectVertexArray pos_arr(EVertexArrayType::kNormal, 0, EVertexDataType::kVertexDataFloat3, &pos_screen, 8);
@@ -888,46 +1173,132 @@ namespace Engine
 		SceneObjectIndexArray idx_arr(0,0,EIndexDataType::kIndexData32i,reinterpret_cast<const void*>(indices),36);
 		//temp sky box's index buffer always at slot 0
 		CreateIndexBuffer(idx_arr);
-		//Create pipeline state
+		ThrowIfFailed(InitializeSkyBoxPSO());
+	}
+
+	HRESULT D3d12GraphicsManager::InitializeSkyBoxPSO()
+	{
+		HRESULT hr = S_OK;
+		const char* vs_filename = "Shader/vs_sb.cso";
+		const char* fs_filename = "Shader/ps_sb.cso";
+		Buffer vertexShader = g_pAssetLoader->OpenAndReadBinarySync(vs_filename);
+		Buffer pixelShader = g_pAssetLoader->OpenAndReadBinarySync(fs_filename);
+		D3D12_SHADER_BYTECODE vertexShaderByteCode;
+		vertexShaderByteCode.pShaderBytecode = vertexShader.GetData();
+		vertexShaderByteCode.BytecodeLength = vertexShader.GetDataSize();
+		D3D12_SHADER_BYTECODE pixelShaderByteCode;
+		pixelShaderByteCode.pShaderBytecode = pixelShader.GetData();
+		pixelShaderByteCode.BytecodeLength = pixelShader.GetDataSize();
+		// create the input layout object
+		D3D12_INPUT_ELEMENT_DESC ied[] =
 		{
-			const char* vs_filename = "Shader/vs_sb.cso";
-			const char* fs_filename = "Shader/ps_sb.cso";
-			Buffer vertexShader = g_pAssetLoader->OpenAndReadBinarySync(vs_filename);
-			Buffer pixelShader = g_pAssetLoader->OpenAndReadBinarySync(fs_filename);
-			D3D12_SHADER_BYTECODE vertexShaderByteCode;
-			vertexShaderByteCode.pShaderBytecode = vertexShader.GetData();
-			vertexShaderByteCode.BytecodeLength = vertexShader.GetDataSize();
-			D3D12_SHADER_BYTECODE pixelShaderByteCode;
-			pixelShaderByteCode.pShaderBytecode = pixelShader.GetData();
-			pixelShaderByteCode.BytecodeLength = pixelShader.GetDataSize();
-			// create the input layout object
-			D3D12_INPUT_ELEMENT_DESC ied[] =
-			{
-				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			};
-			//TODO: Create D3D12_RASTERIZER_DESC D3D12_RENDER_TARGET_BLEND_DESC D3D12_BLEND_DESC D3D12_DEPTH_STENCILOP_DESC D3D12_DEPTH_STENCIL_DESC
-			//Create DepthSenticil Desc
-			const D3D12_DEPTH_STENCILOP_DESC defaultStencilOp = { D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_COMPARISON_FUNC_ALWAYS };
-			D3D12_DEPTH_STENCIL_DESC dsd = { TRUE,D3D12_DEPTH_WRITE_MASK_ALL,D3D12_COMPARISON_FUNC_LESS_EQUAL,FALSE,D3D12_DEFAULT_STENCIL_READ_MASK,
-				D3D12_DEFAULT_STENCIL_WRITE_MASK,defaultStencilOp, defaultStencilOp };
-			//Describe and create the graphics pipeline state object (PSO).
-			D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-			psoDesc.InputLayout = { ied, _countof(ied) };
-			psoDesc.pRootSignature = p_rootsig_.Get();
-			psoDesc.VS = vertexShaderByteCode;
-			psoDesc.PS = pixelShaderByteCode;
-			psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-			psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-			psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-			psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-			psoDesc.DepthStencilState = dsd;
-			psoDesc.SampleMask = UINT_MAX;
-			psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-			psoDesc.NumRenderTargets = 1;
-			psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-			psoDesc.SampleDesc.Count = 1;
-			p_device_->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&p_plstate_skybox_));
-		}
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		};
+		//TODO: Create D3D12_RASTERIZER_DESC D3D12_RENDER_TARGET_BLEND_DESC D3D12_BLEND_DESC D3D12_DEPTH_STENCILOP_DESC D3D12_DEPTH_STENCIL_DESC
+		//Create DepthSenticil Desc
+		const D3D12_DEPTH_STENCILOP_DESC defaultStencilOp = { D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_COMPARISON_FUNC_ALWAYS };
+		D3D12_DEPTH_STENCIL_DESC dsd = { TRUE,D3D12_DEPTH_WRITE_MASK_ALL,D3D12_COMPARISON_FUNC_LESS_EQUAL,FALSE,D3D12_DEFAULT_STENCIL_READ_MASK,
+			D3D12_DEFAULT_STENCIL_WRITE_MASK,defaultStencilOp, defaultStencilOp };
+		//Describe and create the graphics pipeline state object (PSO).
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+		psoDesc.InputLayout = { ied, _countof(ied) };
+		psoDesc.pRootSignature = p_rootsig_.Get();
+		psoDesc.VS = vertexShaderByteCode;
+		psoDesc.PS = pixelShaderByteCode;
+		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+		psoDesc.DepthStencilState = dsd;
+		psoDesc.SampleMask = UINT_MAX;
+		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		psoDesc.NumRenderTargets = 1;
+		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		psoDesc.SampleDesc.Count = 1;
+		hr = p_device_->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&p_plstate_skybox_));
+		return hr;
+	}
+
+	void D3d12GraphicsManager::InitializeSampleSkyBoxPSO()
+	{
+		HRESULT hr = S_OK;
+		const char* vs_filename = "Shader/vs_ori_sb.cso";
+		const char* fs_filename = "Shader/ps_sample_sb.cso";
+		Buffer vertexShader = g_pAssetLoader->OpenAndReadBinarySync(vs_filename);
+		Buffer pixelShader = g_pAssetLoader->OpenAndReadBinarySync(fs_filename);
+		D3D12_SHADER_BYTECODE vertexShaderByteCode;
+		vertexShaderByteCode.pShaderBytecode = vertexShader.GetData();
+		vertexShaderByteCode.BytecodeLength = vertexShader.GetDataSize();
+		D3D12_SHADER_BYTECODE pixelShaderByteCode;
+		pixelShaderByteCode.pShaderBytecode = pixelShader.GetData();
+		pixelShaderByteCode.BytecodeLength = pixelShader.GetDataSize();
+		// create the input layout object
+		D3D12_INPUT_ELEMENT_DESC ied[] =
+		{
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		};
+		//TODO: Create D3D12_RASTERIZER_DESC D3D12_RENDER_TARGET_BLEND_DESC D3D12_BLEND_DESC D3D12_DEPTH_STENCILOP_DESC D3D12_DEPTH_STENCIL_DESC
+		//Create DepthSenticil Desc
+		const D3D12_DEPTH_STENCILOP_DESC defaultStencilOp = { D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_COMPARISON_FUNC_ALWAYS };
+		D3D12_DEPTH_STENCIL_DESC dsd = { TRUE,D3D12_DEPTH_WRITE_MASK_ALL,D3D12_COMPARISON_FUNC_LESS_EQUAL,FALSE,D3D12_DEFAULT_STENCIL_READ_MASK,
+			D3D12_DEFAULT_STENCIL_WRITE_MASK,defaultStencilOp, defaultStencilOp };
+		//Describe and create the graphics pipeline state object (PSO).
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+		psoDesc.InputLayout = { ied, _countof(ied) };
+		psoDesc.pRootSignature = p_rootsig_.Get();
+		psoDesc.VS = vertexShaderByteCode;
+		psoDesc.PS = pixelShaderByteCode;
+		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		psoDesc.SampleMask = UINT_MAX;
+		psoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		psoDesc.NumRenderTargets = 1;
+		psoDesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		psoDesc.SampleDesc.Count = 1;
+		p_device_->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&p_plstate_sample_sb_));
+	}
+
+	void D3d12GraphicsManager::InitializeFilterSkyBoxPSO()
+	{
+		HRESULT hr = S_OK;
+		const char* vs_filename = "Shader/vs_ori_sb.cso";
+		const char* fs_filename = "Shader/ps_filter_sb.cso";
+		Buffer vertexShader = g_pAssetLoader->OpenAndReadBinarySync(vs_filename);
+		Buffer pixelShader = g_pAssetLoader->OpenAndReadBinarySync(fs_filename);
+		D3D12_SHADER_BYTECODE vertexShaderByteCode;
+		vertexShaderByteCode.pShaderBytecode = vertexShader.GetData();
+		vertexShaderByteCode.BytecodeLength = vertexShader.GetDataSize();
+		D3D12_SHADER_BYTECODE pixelShaderByteCode;
+		pixelShaderByteCode.pShaderBytecode = pixelShader.GetData();
+		pixelShaderByteCode.BytecodeLength = pixelShader.GetDataSize();
+		// create the input layout object
+		D3D12_INPUT_ELEMENT_DESC ied[] =
+		{
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		};
+		//TODO: Create D3D12_RASTERIZER_DESC D3D12_RENDER_TARGET_BLEND_DESC D3D12_BLEND_DESC D3D12_DEPTH_STENCILOP_DESC D3D12_DEPTH_STENCIL_DESC
+		//Create DepthSenticil Desc
+		const D3D12_DEPTH_STENCILOP_DESC defaultStencilOp = { D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_STENCIL_OP_KEEP,D3D12_COMPARISON_FUNC_ALWAYS };
+		D3D12_DEPTH_STENCIL_DESC dsd = { TRUE,D3D12_DEPTH_WRITE_MASK_ALL,D3D12_COMPARISON_FUNC_LESS_EQUAL,FALSE,D3D12_DEFAULT_STENCIL_READ_MASK,
+			D3D12_DEFAULT_STENCIL_WRITE_MASK,defaultStencilOp, defaultStencilOp };
+		//Describe and create the graphics pipeline state object (PSO).
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+		psoDesc.InputLayout = { ied, _countof(ied) };
+		psoDesc.pRootSignature = p_rootsig_.Get();
+		psoDesc.VS = vertexShaderByteCode;
+		psoDesc.PS = pixelShaderByteCode;
+		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		psoDesc.SampleMask = UINT_MAX;
+		psoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		psoDesc.NumRenderTargets = 1;
+		psoDesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		psoDesc.SampleDesc.Count = 1;
+		p_device_->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&p_plstate_filter_cube_map_));
 	}
 
 	HRESULT D3d12GraphicsManager::CreateDescriptorHeaps()
@@ -936,7 +1307,7 @@ namespace Engine
 		// Describe and create a render target view (RTV) descriptor heap.
 		{
 			D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-			rtvHeapDesc.NumDescriptors = kFrameCount;
+			rtvHeapDesc.NumDescriptors = kFrameCount + kDefaultIrridanceMapNum * 6;
 			rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 			rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 			if (FAILED(hr = p_device_->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(p_rtv_heap_.GetAddressOf())))) return hr;
@@ -1038,8 +1409,8 @@ namespace Engine
 		{
 			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 		}
-		CD3DX12_ROOT_PARAMETER1 rootParameters[8];
-		CD3DX12_DESCRIPTOR_RANGE1 cbv_table[8];
+		CD3DX12_ROOT_PARAMETER1 rootParameters[10];
+		CD3DX12_DESCRIPTOR_RANGE1 cbv_table[10];
 		cbv_table[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV,1,0);
 		cbv_table[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV,1,1);
 		cbv_table[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV,1,0);
@@ -1048,6 +1419,8 @@ namespace Engine
 		cbv_table[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV,kMaxLightNum - kMaxPointLightNum,1);
 		cbv_table[6].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV,kMaxPointLightNum,7);
 		cbv_table[7].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV,1,9);
+		cbv_table[8].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV,1,10);
+		cbv_table[9].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV,1,11);
 		rootParameters[0].InitAsDescriptorTable(1, &cbv_table[0]);
 		rootParameters[1].InitAsDescriptorTable(1, &cbv_table[1]);
 		rootParameters[2].InitAsDescriptorTable(1, &cbv_table[2]);
@@ -1056,6 +1429,8 @@ namespace Engine
 		rootParameters[5].InitAsDescriptorTable(1,&cbv_table[5]);
 		rootParameters[6].InitAsDescriptorTable(1,&cbv_table[6]);
 		rootParameters[7].InitAsDescriptorTable(1,&cbv_table[7]);
+		rootParameters[8].InitAsDescriptorTable(1,&cbv_table[8]);
+		rootParameters[9].InitAsDescriptorTable(1,&cbv_table[9]);
 		// Allow input layout and deny uneccessary access to certain pipeline stages.
 		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
@@ -1169,8 +1544,16 @@ namespace Engine
 
 		if(b_use_shadow_)
 		{
-			NE_LOG(ALL, kWarning, "GenerateShadowMapArray...")
-				GenerateShadowMapArray();
+			NE_LOG(ALL, kWarning, "InitializeShadowMapPSO...")
+				InitializeShadowMapPSO();
+			NE_LOG(ALL, kWarning, "Done")
+		}
+
+		if(b_use_env_light_)
+		{
+			NE_LOG(ALL, kWarning, "InitializeIBLPSO...")
+				InitializeSampleSkyBoxPSO();
+				InitializeFilterSkyBoxPSO();
 			NE_LOG(ALL, kWarning, "Done")
 		}
 		return hr;
@@ -1196,15 +1579,30 @@ namespace Engine
 	{
 		HRESULT hr = S_OK;
 		auto it = texture_index_.find(texture.GetName());
+		static INT32 texture_id = kMaxLightNum;
 		if(it == texture_index_.end())
 		{
+			if(texture_id > kMaxTextureCount)
+			{
+				NE_LOG(ALL,kError,"Texture buffer create failed! there is no free space")
+				return hr;
+			}
 			auto image = texture.GetImage();
 			// Describe and create a Texture2D.
+			DXGI_FORMAT texture_format;
+			if (image.format == EImageFormat::kNutFormatR8G8B8A8)
+			{
+				texture_format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			}
+			else if(image.format == EImageFormat::kNutFormatR32G32B32A32)
+			{
+				texture_format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			}
 			ComPtr<ID3D12Resource> pTextureGPU;
 			ComPtr<ID3D12Resource> pTextureUpload;
 			D3D12_RESOURCE_DESC textureDesc = {};
 			textureDesc.MipLevels = 1;
-			textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			textureDesc.Format = texture_format;
 			textureDesc.Width = image.width;
 			textureDesc.Height = image.height;
 			textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
@@ -1244,12 +1642,12 @@ namespace Engine
 			srvDesc.Texture2D.MipLevels = -1;
 			srvDesc.Texture2D.MostDetailedMip = 0;
 			D3D12_CPU_DESCRIPTOR_HANDLE srvHandle;
-			int32_t texture_id = texture_index_.size();
+
 			srvHandle.ptr = p_cbv_heap_->GetCPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_id) * cbv_srv_uav_desc_size_;
 			p_device_->CreateShaderResourceView(pTextureGPU.Get(), &srvDesc, srvHandle);
 			texture_index_[texture.GetName()] = texture_id;
 			buffers_.push_back(pTextureUpload.Get());
-			textures_.push_back(pTextureGPU.Get());
+			textures_[texture_id++] = pTextureGPU.Get();
 		}
 		else return hr;
 	}
@@ -1259,16 +1657,20 @@ namespace Engine
 		HRESULT hr = S_OK;
 		assert(texture_path.size() == 6);
 		std::vector<std::unique_ptr<SceneObjectTexture>> images;
+		int mipmap_level = 6;
 		for (int i = 0; i < 6; ++i)
 		{
 			images.emplace_back(std::move(std::make_unique<SceneObjectTexture>(texture_path[i])));
-			images.back()->LoadTexture();
+			//temp load the texture
+			images.back()->GetImage();
+			if(mipmap_level > 1)
+				images.back()->GenerateMipMap(mipmap_level);
 		}
 		auto width = images[0]->width_,height = images[0]->height_;
 		// Describe and create a Texture2D.
 		ComPtr<ID3D12Resource> pTextureUpload;
 		D3D12_RESOURCE_DESC textureDesc = {};
-		textureDesc.MipLevels = 1;
+		textureDesc.MipLevels = mipmap_level;
 		//TODO():24 bit-depth need to expand to 32
 		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		textureDesc.Width = width;
@@ -1282,38 +1684,6 @@ namespace Engine
 		ThrowIfFailed(hr = p_device_->CreateCommittedResource(&heap_prop, D3D12_HEAP_FLAG_NONE, &textureDesc, D3D12_RESOURCE_STATE_COPY_DEST,
 			nullptr, IID_PPV_ARGS(p_env_map_.GetAddressOf())));
 
-		if(images[0]->GetImage().bit_count == 24)
-		{
-			uint32_t new_pitch = images[0]->pitch_ / 3 * 4;
-			size_t data_size = new_pitch * height;
-			for(int i = 0; i < 6; ++i)
-			{
-				auto& img = images[i]->GetImage();
-				NE_LOG(ALL, kWarning, "{} will be expand to 32bit form 24bit", images[i]->GetName())
-				void* data = new uint8_t[data_size];
-				uint8_t* buf = reinterpret_cast<uint8_t*>(data);
-				uint8_t* src = reinterpret_cast<uint8_t*>(img.data);
-				for(int row = 0; row < img.height; row++)
-				{
-					buf = reinterpret_cast<uint8_t*>(data) + row * new_pitch;
-					src = reinterpret_cast<uint8_t*>(img.data) + row * img.pitch;
-					for (int col = 0; col < img.width; col++)
-					{
-						*(uint32_t*)buf = *(uint32_t*)src;
-						buf[3] = 255;
-						buf += 4;
-						src += 3;
-					}
-				}
-				delete img.data;
-				img.data = data;
-				img.data_size = data_size;
-				img.pitch = new_pitch;
-				img.channel = 4;
-				images[i]->pitch_ = new_pitch;
-				images[i]->channel_ = 4;
-			}
-		}
 		const UINT subresourceCount = textureDesc.DepthOrArraySize * textureDesc.MipLevels;
 		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(p_env_map_.Get(), 0, subresourceCount);
 		heap_prop.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -1325,11 +1695,15 @@ namespace Engine
 			std::vector<D3D12_SUBRESOURCE_DATA> texture_datas;
 			for (int i = 0; i < 6; ++i)
 			{
-				D3D12_SUBRESOURCE_DATA textureData = {};
-				textureData.pData = images[i]->GetImage().data;
-				textureData.RowPitch = images[i]->pitch_;
-				textureData.SlicePitch = images[i]->pitch_ * height;
-				texture_datas.push_back(textureData);
+				for(int j = 0; j < mipmap_level; ++j)
+				{
+					auto& img = images[i]->GetImage(j);
+					D3D12_SUBRESOURCE_DATA textureData{};
+					textureData.pData = img.data;
+					textureData.RowPitch = img.pitch;
+					textureData.SlicePitch = img.pitch * img.height;
+					texture_datas.push_back(textureData);
+				}
 			}
 			UpdateSubresources(p_cmdlist_.Get(), p_env_map_.Get(), pTextureUpload.Get(), 0, 0, static_cast<UINT>(texture_datas.size()),
 				texture_datas.data());
@@ -1342,11 +1716,11 @@ namespace Engine
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		srvDesc.Format = textureDesc.Format;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Texture2D.MipLevels = mipmap_level;
 		srvDesc.Texture2D.MostDetailedMip = 0;
 
 		D3D12_CPU_DESCRIPTOR_HANDLE srvHandle;
-		int32_t texture_id = shadow_map_tart_ + cube_shadow_map_start_ + kMaxPointLightNum;
+		int32_t texture_id = kShadowMapStart + kCubeShadowMapStart + kMaxPointLightNum;
 		srvHandle.ptr = p_cbv_heap_->GetCPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_id) * cbv_srv_uav_desc_size_;
 		env_map_handle_.ptr = p_cbv_heap_->GetGPUDescriptorHandleForHeapStart().ptr + (kTextureDescStartIndex + texture_id) * cbv_srv_uav_desc_size_;
 		p_device_->CreateShaderResourceView(p_env_map_.Get(), &srvDesc, srvHandle);

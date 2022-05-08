@@ -29,14 +29,15 @@ namespace Engine
 
 	}
 	using namespace MathInternal;
+
 	template<typename T>
-	constexpr T Normalize(T& var)
+	T Normalize(T& var)
 	{
 		size_t len = CountOf(var.data);
 		double sum = 0.f;
 		T temp{};
 		for (uint32_t i = 0; i < len; i++)
-			sum += pow(var[i],2.f);
+			sum += pow(var[i], 2.f);
 		sum = sqrt(sum);
 		for (uint32_t i = 0; i < len; i++) {
 			var[i] /= sum;
@@ -145,6 +146,8 @@ namespace Engine
 	using Quaternion = Vector4D<float>;
 	using R8G8B8A8Unorm = Vector4D<uint8_t>;
 	using R8G8B8Unorm = Vector3D<uint8_t>;
+	using R32G32B32Float = Vector3D<float>;
+	using R32G32B32A32Float = Vector3D<float>;
 	using Vector4i = Vector4D<uint8_t>;
 
 	template<template<typename> typename TT, typename T>
@@ -181,6 +184,11 @@ namespace Engine
 			res.data[i] = scalar * v.data[i];
 		}
 		return res;
+	}
+	template<template<typename> typename TT, typename T>
+	TT<T> operator*(const TT<T>& v, const T& scalar)
+	{
+		return scalar * v;
 	}
 	template<template<typename> typename TT, typename T>
 	TT<T> operator+(const T& scalar, const TT<T>& v)

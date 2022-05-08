@@ -1,9 +1,8 @@
 ﻿#pragma once
 
 #include "../../pch.h"
-#include <array>
+
 #include "Framework/Common/GraphicsManager.h"
-#include "Framework/Common/SceneObject.h"
 #include "Framework/Common/Buffer.h"
 
 using Microsoft::WRL::ComPtr;
@@ -29,6 +28,26 @@ namespace Engine
             INT32 vertex_buf_id_;
         };
     public:
+        using RTTHandle = INT32;
+        struct RTTInfo
+        {
+            INT32 texture_id;
+            union 
+            {
+                INT32 dsv_start;
+                INT32 rtv_start;
+            };
+            INT32 dsc_num;
+            size_t srv_ptr;
+            void BindToPineline(ID3D12GraphicsCommandList* cmd,int root_index)
+            {
+                D3D12_GPU_DESCRIPTOR_HANDLE srv_handle;
+                srv_handle.ptr = srv_ptr;
+                cmd->SetGraphicsRootDescriptorTable(root_index, srv_handle);
+            }
+        };
+
+    public:
         int Initialize() final;
         void Finalize() final;
         void Present() final;
@@ -38,6 +57,11 @@ namespace Engine
 
         void DrawBatch(const std::vector<std::shared_ptr<DrawBatchContext>>& batches) final;
         void DrawBatch(std::shared_ptr<DrawBatchContext> batch) final;
+
+        void BeginSkyBox(int cube_id,int type);
+        void EndSkyBox(int cube_id,int type);
+        //void EndIrridanceMap(int cube_id);
+        void DrawSkyBox(int type) final;
 
 #ifdef _DEBUG
         void DrawLine(const Vector3f& from, const Vector3f& to, const Vector3f& color) final;
@@ -61,20 +85,35 @@ namespace Engine
         void BeginFrame() final;
         void EndFrame() final;
 
-        void GenerateShadowMapArray(UINT32 count = kMaxLightNum);
-        void BeginShadowMap(Light& light, int light_id, int point_light_id, int cube_map_id) final;
-        void EndShadowMap(int light_index, bool is_point_light, int point_light_id) final;
+        void InitializeShadowMapPSO();
+
+        [[nodiscard]] RTTHandle CreateRenderTextureBuffer(bool depth_only,bool is_cube,bool is_float = false);
+
+        void BeginShadowMap(int type, int light_id, bool init, int point_light_id, int cube_map_id) final;
+        void EndShadowMap(int light_type) final;
         void EndShadowMap() final;
         void SetShadowMap() final;
         void BeginRenderPass() final;
-        
-        void DrawSkyBox() final;
+
+        void CalculateLights() final;
+
+        /// <summary>
+        /// draw sky box cube map and filter it
+        /// </summary>
+        void GenerateIBLMap();        
+        // - create texture for cube map skybox and diffuse filterd map
+        // - create pso for sample and filter
 
         HRESULT ResetCommandList();
         HRESULT CreateCommandList();
         HRESULT InitializePSO();
 
         void CreateSkyBoxBuffer();
+        HRESULT InitializeSkyBoxPSO();
+
+        void InitializeSampleSkyBoxPSO();
+
+        void InitializeFilterSkyBoxPSO();
 
         HRESULT CreateDescriptorHeaps();
         HRESULT CreateRenderTarget();
@@ -100,7 +139,8 @@ namespace Engine
             INT32 vertex_buf_len;
         };
         static constexpr uint32_t		    kTextureDescStartIndex = kFrameCount * (1 + kMaxSceneObjectCount);
-        static constexpr FLOAT              kBackColor[] = { 0.5f, 0.0f, 0.0f, 1.0f };
+        static constexpr FLOAT              kBackColor[] = { 0.66f, 0.828f, 1.f, 1.0f };
+        static constexpr INT32              kNonMaterialTextureStart = kMaxTextureCount - 32;
 
         ComPtr<ID3D12Resource> p_env_map_ = nullptr;
         D3D12_GPU_DESCRIPTOR_HANDLE env_map_handle_;
@@ -109,6 +149,9 @@ namespace Engine
 
         ComPtr<ID3D12PipelineState> p_plstate_sm_ = nullptr;
 
+        ComPtr<ID3D12PipelineState> p_plstate_sample_sb_ = nullptr;
+
+        std::vector<RTTInfo> rtt_handles_;
         
         ComPtr<ID3D12Device> p_device_ = nullptr;             // the pointer to our Direct3D device interface
         D3D12_VIEWPORT                  vp_;                         // viewport structure
@@ -139,9 +182,23 @@ namespace Engine
         uint32_t                        cbv_srv_uav_desc_size_;
         uint32_t                        vertex_buf_per_frame_num_;
 
-        uint32_t                        cube_shadow_map_start_ = 0u;
+        inline static constexpr UINT32                        kShadowMapStart = 0u;      //start pos of the shadow_map based in textures
+        inline static constexpr UINT32                        kCubeShadowMapStart = kShadowMapStart + (kMaxLightNum - kMaxPointLightNum);
+        std::map<std::string,RTTHandle> light_shadow_maps_;
+        std::queue<RTTHandle> shadow_map_pool_;
+        std::queue<RTTHandle> cube_shadow_map_pool_;
 
-        uint32_t                        shadow_map_tart_;      //start pos of the shadow_map based on the srv handle
+
+        RTTHandle                       cube_map_sky_box_handle_;
+        RTTHandle                       irridance_map_handle_;
+
+        inline static constexpr UINT32  kDefaultIrridanceMapNum = 2;
+        UINT32                          irridance_map_rtv_start_ = kFrameCount;
+        UINT32                          irridance_map_rtv_offset_ = kDefaultIrridanceMapNum * 6;
+        UINT32                          kReserverTextureStart = 102;
+        UINT32                          irridance_map_buf_offset_;
+        ComPtr<ID3D12PipelineState>     p_plstate_filter_cube_map_ = nullptr;
+
 
         ComPtr<ID3D12Resource> p_vertex_buf_ = nullptr;          // the pointer to the vertex buffer
         std::vector<ComPtr<ID3D12Resource>>    buffers_;                          // the pointer to the vertex buffer
@@ -149,8 +206,8 @@ namespace Engine
         std::vector<D3D12_INDEX_BUFFER_VIEW>        index_buf_view_;                  // a view of the index buffer
 
         /*
-        0                 shadow_map_tart_         cube_shadow_map_start_     
-        material texture  | shaodw_map            | cube_shade_map      offset 1
+        0                 shadow_map_tart_         cube_shadow_map_start_              irridance_map_start_
+        material texture  | shaodw_map            | cube_shadow_map      offset 1      |irridance cube map
         */                
         std::vector<ComPtr<ID3D12Resource>> textures_;
         std::map<std::string,INT32> texture_index_;

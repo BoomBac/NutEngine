@@ -17,7 +17,8 @@ namespace Engine
 		float		outer_angle;		//48
 		float		falloff_begin;	
 		float		falloff_end;
-		int			type;	//0 dir 1 point 2 spot
+		//low 2 bit for type 0 dir 1 point 2 spot,other for RTTInfo handle
+		int			type;	
 		int			shadow_map_index;	//64	
 		Matrix4x4f	vp_matrix_;
 		Light() : light_position(Vector3f{0.f,0.f,0.f}),light_instensity(0.f),light_direction(0.f,0.f,0.f),inner_angle(0.f),light_color(0.f,0.f,0.f),
@@ -31,7 +32,7 @@ namespace Engine
 		Vector4f    ambient_color_;
 		Vector3f	camera_position_;
 		float		padding;
-		Matrix4x4f	point_light_vp_mat[kMaxPointLightNum * 6];
+		Matrix4x4f	point_light_vp_mat[kMaxPointLightNum * 6 + 6];
 		Light lights_[kMaxLightNum];
 	};
 	struct DrawBatchContext
