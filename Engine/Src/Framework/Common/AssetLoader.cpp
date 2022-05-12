@@ -2,16 +2,17 @@
 #include <filesystem>
 
 #include "../Inc/Framework/Common/AssetLoader.h"
+#include "Framework/Common/Log.h"
 
 
 using namespace Engine;
-
+namespace fs = std::filesystem;
 
 
 int Engine::AssetLoader::Initialize()
 {
     int ret = 0;
-    AddSearchPath("H:/Project_VS2019/NutEngine/Engine");
+    AddSearchPath("H:/Project_VS2019/NutEngine/Engine/Asset/");
     return ret;
 }
 
@@ -26,7 +27,7 @@ void Engine::AssetLoader::Tick()
 
 bool Engine::AssetLoader::AddSearchPath(const char* path)
 {
-    std::vector<std::string>::iterator src = search_path_.begin();
+    auto src = search_path_.begin();
     while (src != search_path_.end()) 
     {
         if (!(*src).compare(path))
@@ -39,7 +40,7 @@ bool Engine::AssetLoader::AddSearchPath(const char* path)
 
 bool Engine::AssetLoader::RemoveSearchPath(const char* path)
 {
-    std::vector<std::string>::iterator src = search_path_.begin();
+    auto src = search_path_.begin();
     while (src != search_path_.end())
     {
         if (!(*src).compare(path)) 
@@ -52,70 +53,51 @@ bool Engine::AssetLoader::RemoveSearchPath(const char* path)
     return true;
 }
 
-bool Engine::AssetLoader::FileExists(const char* filePath)
-{
-    AssetFilePtr fp = OpenFile(filePath, EAssetOpenMode::kOpenBinary);
-    if (fp != nullptr) 
-    {
-        CloseFile(fp);
-        return true;
-    }
-    return false;
-}
 
-
-std::string Engine::AssetLoader::GetAbsolutePath(const char* file_name) const
+std::string Engine::AssetLoader::GetAbsolutePath(const char* file_path) const
 {
-    std::string full_path;
-    for(auto& str : search_path_)
+    fs::path _file_path(file_path);
+    if (_file_path.is_absolute())
+        return file_path;
+    else
     {
-        full_path.append(str);
-        full_path.append("/Asset/");
-        full_path.append(file_name);
-        std::filesystem::path _path(full_path);
-        if(std::filesystem::exists(_path)) return full_path;
-        else continue;
+        for (auto& s_path : search_path_)
+        {
+            for (auto& path : fs::recursive_directory_iterator(s_path))
+            {
+                if (!path.is_directory())
+                {
+                    auto tar = _file_path.filename().string();
+                    auto cur = path.path().filename().string();
+                    if(tar == cur)
+                        return path.path().string();
+                }
+            }
+        }
     }
+    return std::string{};
 }
 
 Engine::AssetLoader::AssetFilePtr Engine::AssetLoader::OpenFile(const char* name, EAssetOpenMode mode)
 {
     FILE* fp = nullptr;
-    std::string up_path;
-    std::string full_path;
-    for (int32_t i = 0; i < 10; i++)
+    std::string abs_path = GetAbsolutePath(name);
+    switch (mode)
     {
-        auto src = search_path_.begin();
-        bool bloop = true;
-        while (bloop)
-        {
-            full_path.assign(up_path);
-            if (src != search_path_.end())
-            {
-                full_path.append(*src);
-                full_path.append("/Asset/");
-                src++;
-            }
-            else
-            {
-                bloop = false;
-                full_path.append("Asset/");
-            }
-            full_path.append(name);
-            switch (mode)
-            {
-            case Engine::AssetLoader::EAssetOpenMode::kOpenText:
-                fp = fopen(full_path.c_str(), "r");
-                break;
-            case Engine::AssetLoader::EAssetOpenMode::kOpenBinary:
-                fp = fopen(full_path.c_str(), "rb");
-                break;
-            }
-            if (fp) return static_cast<AssetFilePtr>(fp);         
-        }
-        up_path.append("../");
+    case Engine::AssetLoader::EAssetOpenMode::kOpenText:
+        fp = fopen(abs_path.c_str(), "r");
+        break;
+    case Engine::AssetLoader::EAssetOpenMode::kOpenBinary:
+        fp = fopen(abs_path.c_str(), "rb");
+        break;
     }
-    return nullptr;
+    if(auto error = GetLastError(); error == 2 && error == 3)
+        NE_LOG(ALL, kError, "[AssetLoader Error]: The specified file :{} was not found, please check if the path is correct or add a search path!", name)
+    else if(error == 4)
+        NE_LOG(ALL, kError, "[AssetLoader Error]: The system cannot open the file :{}", name)
+    else if (error == 5)
+        NE_LOG(ALL, kError, "[AssetLoader Error]: File :{} Access denied", name)
+    return fp;
 }
 
 Buffer Engine::AssetLoader::OpenAndReadTextSync(const char* filePath)

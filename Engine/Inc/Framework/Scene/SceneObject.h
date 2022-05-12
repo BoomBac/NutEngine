@@ -62,7 +62,8 @@ namespace Engine
         kVertex,
         kNormal,
         kUVs,
-        kColor
+        kColor,
+        kTangant
     };
 
     enum class ESceneObjectCollisionType
@@ -119,11 +120,24 @@ namespace Engine
     class SceneObjectVertexArray
     {
     public:
+        SceneObjectVertexArray() = default;
         SceneObjectVertexArray(EVertexArrayType type, const uint32_t morph_index = 0, const EVertexDataType data_type = EVertexDataType::kVertexDataFloat3,
-            const void* data = nullptr, const size_t data_size = 0) : type_(type),
+            void* data = nullptr, const size_t data_size = 0) : type_(type),
             morph_target_index_(morph_index), data_type_(data_type), p_data_(data), size_(data_size) {};
         SceneObjectVertexArray(SceneObjectVertexArray& arr) = default;
         SceneObjectVertexArray(SceneObjectVertexArray&& arr) = default;
+
+        SceneObjectVertexArray& operator=(SceneObjectVertexArray&& other)
+        {
+            this->type_ = other.type_;
+            this->morph_target_index_ = other.morph_target_index_;
+            this->data_type_ = other.data_type_;
+            this->size_ = other.size_;
+            this->p_data_ = other.p_data_;
+            other.p_data_ = nullptr;
+            return *this;
+        }
+
         size_t GetDataSize() const
         {
             size_t size = size_;
@@ -161,9 +175,9 @@ namespace Engine
         EVertexArrayType GetType() const { return type_; }
     protected:
         EVertexArrayType type_;
-        const uint32_t    morph_target_index_;
-        const EVertexDataType data_type_;
-        const void* p_data_;
+        uint32_t    morph_target_index_;
+        EVertexDataType data_type_;
+        void* p_data_;
         //represents the number of vertices, a vertex may consist of 3-4 float numbers
         size_t      size_;
     };

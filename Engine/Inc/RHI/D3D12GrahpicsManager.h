@@ -15,10 +15,11 @@ namespace Engine
         {
             Matrix4x4f object_matrix;
             Matrix4x4f normal_matrix;
-            Vector4f base_color;
-            Vector4f specular_color;
-            float specular_power;
-            float use_texture;
+            //material
+            Vector4f diffuse_metallic;
+            Vector4f emissive_roughness;
+            float   ambient_oc;
+            int      flag; //low 1 for base_color,low 2 for roughness,low 3 for metallic,low 4 for emissive,low 5 for normal,low 6 form ao
         };
         struct DrawDebugBatchContext
         {
@@ -60,7 +61,7 @@ namespace Engine
 
         void BeginSkyBox(int cube_id,int type);
         void EndSkyBox(int cube_id,int type);
-        //void EndIrridanceMap(int cube_id);
+
         void DrawSkyBox(int type) final;
 
 #ifdef _DEBUG
@@ -108,6 +109,20 @@ namespace Engine
         HRESULT CreateCommandList();
         HRESULT InitializePSO();
 
+        //******************Begin Compute Shader
+        HRESULT InitializeComputePSO();
+        HRESULT CreateComputeRootsignature();
+        ComPtr<ID3D12RootSignature> p_rootsig_cmp_ = nullptr;
+        void BeginComputePass();
+        void EndComputePass();
+        void CreateTextureBufferWithUAV();
+        ComPtr<ID3D12Resource> p_blur_map0 = nullptr;
+        D3D12_CPU_DESCRIPTOR_HANDLE blur0_srv_ch_;
+        D3D12_CPU_DESCRIPTOR_HANDLE blur0_uav_ch_;
+        D3D12_GPU_DESCRIPTOR_HANDLE blur0_srv_gh_;
+        D3D12_GPU_DESCRIPTOR_HANDLE blur0_uav_gh_;
+
+        //******************End Compute Shader
         void CreateSkyBoxBuffer();
         HRESULT InitializeSkyBoxPSO();
 
@@ -146,6 +161,8 @@ namespace Engine
         D3D12_GPU_DESCRIPTOR_HANDLE env_map_handle_;
         D3dDrawBatchContext sky_box_dbc_;
         ComPtr<ID3D12PipelineState> p_plstate_skybox_ = nullptr;
+
+        ComPtr<ID3D12PipelineState> p_plstate_compute = nullptr;
 
         ComPtr<ID3D12PipelineState> p_plstate_sm_ = nullptr;
 

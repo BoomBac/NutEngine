@@ -259,6 +259,7 @@
     <ClCompile Include="Src\Framework\Parser\JEPG.cpp" />
     <ClCompile Include="Src\Framework\Scene\SceneObjectCamera.cpp" />
     <ClCompile Include="Src\Framework\Scene\SceneObjectMaterial.cpp" />
+    <ClCompile Include="Src\Framework\Scene\SceneObjectMesh.cpp" />
     <ClCompile Include="Src\Framework\Scene\SceneObjectTexture.cpp" />
     <ClCompile Include="Src\Physics\NutPhysicsManager.cpp" />
     <ClCompile Include="Src\RHI\D3D12GraphicsManager.cpp" />
@@ -266,7 +267,7 @@
   <ItemGroup>
     <FxCompile Include="Asset\Shader\cs_test.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4.0</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compute</ShaderType>

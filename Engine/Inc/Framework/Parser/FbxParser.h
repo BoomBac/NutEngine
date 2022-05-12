@@ -32,6 +32,8 @@ namespace Engine
 		bool ReadNormal(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh);
 		bool ReadVertex(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh);
 		bool ReadUVs(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh);
+		bool ReadTangent(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh);
+		bool CalculateTangant(std::shared_ptr<SceneObjectMesh> nut_mesh);
 		void CopyTexture(std::string src, std::string dst, std::string name);
 		bool ConvertFbxConstructToSceneNode(fbxsdk::FbxNode* object,std::shared_ptr<BaseSceneNode>& base_node,Scene& scene, fbxsdk::FbxScene* fbx_scene);
 		Vector4f FbxToNutVector4f(fbxsdk::FbxDouble3 in)

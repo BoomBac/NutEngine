@@ -356,6 +356,9 @@
     <ClCompile Include="Src\Framework\Parser\HDR.cpp">
       <Filter>Src\Framework\Parser</Filter>
     </ClCompile>
+    <ClCompile Include="Src\Framework\Scene\SceneObjectMesh.cpp">
+      <Filter>Src\Framework\Scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Asset\Shader\vs.hlsl">

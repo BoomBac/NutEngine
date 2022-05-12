@@ -32,7 +32,7 @@ namespace Engine
 	{
 		if (images_.empty())
 		{
-			Buffer buf = g_pAssetLoader->OpenAndReadBinarySync(path_.c_str());
+			Buffer buf = g_pAssetLoader->OpenAndReadBinarySync(name_.c_str());
 			std::string ext = path_.substr(path_.find_last_of(".") + 1);
 			//std::shared_ptr<Image> image;
 			std::unique_ptr<IIMageParser> parser;
@@ -40,6 +40,11 @@ namespace Engine
 				parser = std::make_unique<JpegParser>();
 			else if(ext == "hdr")
 				parser = std::make_unique<HDRParser>();
+			else
+			{
+				NE_LOG(ALL,kError,"[SceneObjectTexture] : Unrecognized file extensions: {}",ext)
+				return;
+			}
 			auto image = std::make_shared<Image>(parser->Parse(buf));
 			channel_ = image->channel;
 			width_ = image->width;
@@ -60,6 +65,7 @@ namespace Engine
 			{
 				uint32_t new_pitch = pitch_ / 3 * 4;
 				size_t data_size = new_pitch * height_;
+				img0.bit_count = img0.bit_count / 3 * 4;
 				if(img0.format == EImageFormat::kNutFormatR8G8B8)
 				{
 					NE_LOG(ALL, kWarning, "{} will be expand to 32bit form 24bit", name_)
@@ -81,6 +87,7 @@ namespace Engine
 					delete img0.data;
 					img0.data = data;
 					img0.format = EImageFormat::kNutFormatR8G8B8A8;
+
 				}
 				else if(img0.format == EImageFormat::kNutFormatR32G32B32)
 				{

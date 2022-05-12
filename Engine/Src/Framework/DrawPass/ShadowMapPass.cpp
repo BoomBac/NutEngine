@@ -11,22 +11,22 @@ namespace Engine
 		int non_point_light_index = 0;
 		int light_type = 0;
 		//if needn't update shaodw map,just set the index
-		if(!g_pGraphicsManager->REGenerateShadowMap()) 
-		{
-			g_pGraphicsManager->SetShadowMap();
-			for (auto& light : frame.frame_context.lights_)
-			{
-				if (light.light_instensity > 0.f)
-				{
-					light_type = light.type & 0x03;
-					if (light_type == 1)
-						light.shadow_map_index = point_light_index++;
-					else
-						light.shadow_map_index = non_point_light_index++;
-				}			
-			}
-			return;
-		}
+		//if(!g_pGraphicsManager->REGenerateShadowMap()) 
+		//{
+		//	g_pGraphicsManager->SetShadowMap();
+		//	for (auto& light : frame.frame_context.lights_)
+		//	{
+		//		if (light.light_instensity > 0.f)
+		//		{
+		//			light_type = light.type & 0x03;
+		//			if (light_type == 1)
+		//				light.shadow_map_index = point_light_index++;
+		//			else
+		//				light.shadow_map_index = non_point_light_index++;
+		//		}			
+		//	}
+		//	return;
+		//}
 		for(auto& light : frame.frame_context.lights_)
 		{
 			if(light.light_instensity > 0.f)

@@ -3,6 +3,8 @@
 #include "../pch.h"
 #include "Buffer.h"
 
+#include <filesystem>
+
 namespace Engine
 {
 	class AssetLoader : public IRuntimeModule
@@ -26,8 +28,8 @@ namespace Engine
 		};
 		bool AddSearchPath(const char* path);
 		bool RemoveSearchPath(const char* path);
-		bool FileExists(const char* filePath);
-		std::string GetAbsolutePath(const char* file_name) const;
+
+		std::string GetAbsolutePath(const char* file_path) const;
 		AssetFilePtr OpenFile(const char* name, EAssetOpenMode mode);
 		Buffer OpenAndReadTextSync(const char* filePath);
 		Buffer OpenAndReadBinarySync(const char* filePath);
@@ -49,7 +51,7 @@ namespace Engine
 			return result;
 		}
 	private:
-		std::vector<std::string> search_path_;
+		std::vector<std::filesystem::path> search_path_;
 	};
 	extern AssetLoader* g_pAssetLoader;
 }

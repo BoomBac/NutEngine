@@ -8,7 +8,7 @@ float3 FilterCubeMap(float3 normal)
 	float3 right = normalize(cross(up, normal));
 	up = normalize(cross(normal, right));
 	float nrSamples = 0.0;
-	float sampleDelta = 0.02f;
+	float sampleDelta = 0.03f;
 	for (float phi = 0.0; phi < TwoPI; phi += sampleDelta)
 	{
 		for (float theta = 0.0; theta < HalfPI; theta += sampleDelta)

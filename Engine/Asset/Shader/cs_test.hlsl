@@ -10,5 +10,5 @@ RWTexture2D<float4> gOutput;
 [numthreads(16, 16, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
-	gInputA[DTid.xy] = gInputA[DTid.xy] + gInputB[DTid.xy];
+	gOutput[DTid.xy] = gInputA[DTid.xy] + gInputB[DTid.xy];
 }

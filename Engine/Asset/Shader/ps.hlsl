@@ -121,11 +121,24 @@ float shadow_test_point_light(int cube_shadow_map_index, float3 sp_pos_w, float3
 	return 1.f;
 }
 
+float3 NormalSampleToWorldSpace(float3 normal_sample, float3 normal_w, float3 tangentW)
+{
+	float3 normalT = 2.f * normal_sample - 1.f;
+	float3 N = normalize(normal_w);
+	float3 T = normalize(tangentW - dot(tangentW, N) * N);
+	float3 B = cross(N, T);
+	float3x3 TBN = float3x3(T, B, N);
+	float3 normal_sampleW = mul(normalT, TBN);
+	return normal_sampleW;
+}
+
 float3 CookTorranceBRDF(PSInput input, float3 light_dir)
 {
-	float roughness = 0.2f;
-	float metallic = 0.f;
-	float3 albedo = { 1.f, 1.0f, 1.f };
+	//low 1 for base_color,low 2 for roughness,low 3 for metallic,low 4 for emissive,low 5 for normal,low 6 form ao
+	float3 base_color = (g_mat_flag_ & 0x01) == 0x01 ? g_base_color_ : g_tex_base_color.Sample(g_sampler, input.uv).xyz;
+	float roughness = (g_mat_flag_ & 0x02) == 0x02 ? g_roughness_ : g_tex_roughness.Sample(g_sampler, input.uv).x;
+	float metallic = (g_mat_flag_ & 0x04) == 0x04 ? g_metallic_ : g_tex_metallic.Sample(g_sampler, input.uv).x;
+	//float3 base_color = g_tex_base_color.Sample(g_sampler, input.uv).xyz;
 	float3 N = normalize(input.normal);
 	float3 L = normalize(light_dir);
 	float3 V = normalize(g_camera_position_ - input.positionW);
@@ -141,7 +154,7 @@ float3 CookTorranceBRDF(PSInput input, float3 light_dir)
 	float3 KS = F;
 	float3 kD = float3(1.f, 1.f, 1.f) - KS;
 	kD *= 1.f - metallic;
-	return kD * albedo / PI + KS * specular;
+	return kD * base_color / PI + KS * specular;
 }
 
 float3 CalculateLight(Light light, PSInput input)
@@ -180,18 +193,7 @@ float3 CalculateLight(Light light, PSInput input)
 			}
 			break;
 	}
-		
-	if (g_use_texture_ == 1.f)
-	{
-		linear_color = light.light_intensity_ * falloff * light.light_color_ * g_texture.Sample(g_sampler, input.uv).xyz * max(dot(N, -LDir), 0.f)
-				+ g_specular_color_.rgb * pow(max(0.f, dot(R, V)), max(8.f, g_gloss_));
-	}
-	else
-	{
-		//linear_color = falloff * light.light_intensity_ * (light.light_color_ * g_base_color_.rgb * max(dot(N, LDir), 0.f) +light.light_color_ * pow(max(0.f, dot(R, V)), max(8.f, g_gloss_)));
-		linear_color = falloff * light.light_intensity_ * light.light_color_ * CookTorranceBRDF(input, LDir) * g_base_color_.xyz;
-
-	}
+	linear_color = falloff * light.light_intensity_ * light.light_color_ * CookTorranceBRDF(input, LDir);
 	return linear_color;
 
 }
@@ -199,7 +201,7 @@ float3 CalculateLight(Light light, PSInput input)
 float3 CalculateAmbientLight(PSInput input)
 {
 	float3 ambient = { 0.f, 0.f, 0.f };
-	float metallic = 0.f;
+	float metallic = (g_mat_flag_ & 0x04) == 0x04 ? g_metallic_ : g_tex_metallic.Sample(g_sampler, input.uv).x;
 	float3 N = normalize(input.normal);
 	float3 V = normalize(g_camera_position_ - input.positionW);
 	float3 KS = FresnelSchlickRoughness(max(0.f, dot(N, V)), float3(0.04, 0.04, 0.04), 0.1f);
@@ -215,16 +217,22 @@ float3 CalculateAmbientLight(PSInput input)
 	(PSInput input):
 	SV_TARGET
 {
-	float3 linear_color = CalculateAmbientLight(input);
-	for (int i = 0; i < 40; ++i)
-	{
-		int type = lights[i].light_type_ & 0x03;
-		float visbility = 0;
-		if (type == 1)
-			visbility = shadow_test_point_light(lights[i].shadow_map_index, input.positionW, lights[i].light_pos_);
-		else
-			visbility = shadow_test(i, lights[i].shadow_map_index, input.positionW, lights[i].light_pos_);
-		linear_color += CalculateLight(lights[i], input) * visbility;
+		if ((g_mat_flag_ & 0x10) != 0x10)
+		{
+			float3 normal_sample = g_tex_normal.Sample(g_sampler, input.uv).xyz;
+			input.normal = NormalSampleToWorldSpace(normal_sample, input.normal, input.tangentW);
+		}
+		float3 emissive = (g_mat_flag_ & 0x08) == 0x08 ? g_emissive_color_ : g_tex_emissive.Sample(g_sampler, input.uv).xyz;
+		float3 linear_color = emissive + CalculateAmbientLight(input) * 0.08f;
+		for (int i = 0; i < 40; ++i)
+		{
+			int type = lights[i].light_type_ & 0x03;
+			float visbility = 0;
+			if (type == 1)
+				visbility = shadow_test_point_light(lights[i].shadow_map_index, input.positionW, lights[i].light_pos_);
+			else
+				visbility = shadow_test(i, lights[i].shadow_map_index, input.positionW, lights[i].light_pos_);
+			linear_color += CalculateLight(lights[i], input) * visbility;
+		}
+		return float4(pow(clamp(linear_color, float3(0.f, 0.f, 0.f), float3(1.f, 1.f, 1.f)), 1.f / 2.2f), 1.f);
 	}
-	return float4(pow(clamp(linear_color, float3(0.f, 0.f, 0.f), float3(1.f, 1.f, 1.f)), 1.f / 2.2f), 1.f);
-}

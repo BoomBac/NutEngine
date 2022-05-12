@@ -209,8 +209,7 @@ void Engine::FbxParser::GenerateMaterial(const fbxsdk::FbxSurfaceMaterial* mat, 
 {
 	string material_name = mat->GetName();
 	if (scene.GetMaterial(material_name) != nullptr) return;
-	auto material = make_shared<SceneObjectMaterial>();
-	material->SetName(material_name);
+	auto material = make_shared<SceneObjectMaterial>(material_name);
 	const fbxsdk::FbxSurfacePhong* phong = FbxCast<fbxsdk::FbxSurfacePhong>(mat);
 	if (phong != nullptr) 
 	{
@@ -220,6 +219,7 @@ void Engine::FbxParser::GenerateMaterial(const fbxsdk::FbxSurfaceMaterial* mat, 
 		for(int32_t i = 0; i < fbxsdk::FbxLayerElement::sTypeTextureCount; ++i)
 		{
 			auto prop = phong->FindProperty(fbxsdk::FbxLayerElement::sTextureChannelNames[i]);
+			//prop = phong->FindProperty(mat->sNormalMap);
 			if(prop.IsValid())
 			{
 				int tex_count = prop.GetSrcObjectCount<fbxsdk::FbxTexture>();
@@ -231,35 +231,57 @@ void Engine::FbxParser::GenerateMaterial(const fbxsdk::FbxSurfaceMaterial* mat, 
 						std::string texture_type = prop.GetNameAsCStr();
 						fbxsdk::FbxFileTexture* file_texture = fbxsdk::FbxCast<FbxFileTexture>(texture);
 						std::string file_name{file_texture->GetMediaName()};
+						NE_LOG(ALL, kNormal, "Material: {} have prop {},source file path is {}", material_name, texture_type, file_name)
 						if(texture_type=="DiffuseColor")
 						{
 							p_thread_pool_->Enqueue(&FbxParser::CopyTexture,this, std::string(file_texture->GetFileName()), 
 								std::string(kAssetTexturePath), file_name);
 							if(fs::exists(file_texture->GetFileName()))
-							material->SetTexture(SceneObjectMaterial::kDiffuse, std::string(kAssetTexturePath).append(file_name));
-						}						
+								material->SetTexture(SceneObjectMaterial::kDiffuse, std::string(kAssetTexturePath).append(file_name));
+						}			
+						else if (texture_type == "ReflectionFactor")
+						{
+							p_thread_pool_->Enqueue(&FbxParser::CopyTexture, this, std::string(file_texture->GetFileName()),
+								std::string(kAssetTexturePath), file_name);
+							if (fs::exists(file_texture->GetFileName()))
+								material->SetTexture(SceneObjectMaterial::kMetallic, std::string(kAssetTexturePath).append(file_name));
+						}
+						else if (texture_type == "EmissiveColor")
+						{
+							p_thread_pool_->Enqueue(&FbxParser::CopyTexture, this, std::string(file_texture->GetFileName()),
+								std::string(kAssetTexturePath), file_name);
+							if (fs::exists(file_texture->GetFileName()))
+								material->SetTexture(SceneObjectMaterial::kEmissiveColor, std::string(kAssetTexturePath).append(file_name));
+						}
+						else if (texture_type == "ShininessExponent")
+						{
+							p_thread_pool_->Enqueue(&FbxParser::CopyTexture, this, std::string(file_texture->GetFileName()),
+								std::string(kAssetTexturePath), file_name);
+							if (fs::exists(file_texture->GetFileName()))
+								material->SetTexture(SceneObjectMaterial::kRoughness, std::string(kAssetTexturePath).append(file_name));
+						}
 						else if(texture_type == "SpecularColor")
 						{
 							p_thread_pool_->Enqueue(&FbxParser::CopyTexture, this, std::string(file_texture->GetFileName()),
 								std::string(kAssetTexturePath), file_name);
 							if (fs::exists(file_texture->GetFileName()))
-							material->SetTexture(SceneObjectMaterial::kSpecular, std::string(kAssetTexturePath).append(file_name));
+								material->SetTexture(SceneObjectMaterial::kSpecular, std::string(kAssetTexturePath).append(file_name));
 						}
 						else if(texture_type == "NormalMap")
 						{
 							p_thread_pool_->Enqueue(&FbxParser::CopyTexture, this, std::string(file_texture->GetFileName()),
 								std::string(kAssetTexturePath), file_name);
 							if (fs::exists(file_texture->GetFileName()))
-							material->SetTexture(SceneObjectMaterial::kNormalMap, std::string(kAssetTexturePath).append(file_name));
+								material->SetTexture(SceneObjectMaterial::kNormalMap, std::string(kAssetTexturePath).append(file_name));
 						}
 					}
 				}
 			}
 		}
-	}
-	
 
+	}
 	scene.Materials[material_name] = material;
+	return;
 }
 
 void Engine::FbxParser::GenerateLight(const fbxsdk::FbxLight* light, Scene& scene)
@@ -315,28 +337,25 @@ void Engine::FbxParser::GenerateLight(const fbxsdk::FbxLight* light, Scene& scen
 
 bool FbxParser::GenerateMesh(std::shared_ptr<SceneObjectGeometry> geo, fbxsdk::FbxMesh* mesh, Scene& scene)
 {
-	std::shared_ptr<SceneObjectMesh> nut_mesh(new SceneObjectMesh());
+
 	if(!mesh->IsTriangleMesh()) {
 		fbxsdk::FbxGeometryConverter convert(fbx_manager_);
 		mesh = FbxCast<fbxsdk::FbxMesh>(convert.Triangulate(mesh, true));
 	}
+	std::shared_ptr<SceneObjectMesh> nut_mesh(new SceneObjectMesh(mesh->GetPolygonCount()));
 	//The vertex must be added to the MeshObject's vector before the normal, 
 	//because the input layout is passed in the vertex-normal order
 	//not thread safe now 
 	auto ret1 = p_thread_pool_->Enqueue(&FbxParser::ReadVertex,this,std::ref(*mesh),nut_mesh);
 	auto ret2 = p_thread_pool_->Enqueue(&FbxParser::ReadNormal, this, std::ref(*mesh), nut_mesh);
-	//auto ret1 = ReadVertex(*mesh,nut_mesh);
-	//auto ret2 = ReadNormal(*mesh,nut_mesh);
-	//auto ret3 = ReadUVs(*mesh,nut_mesh);
-	if(ret1.get()&& ret2.get())
+	auto ret3 = p_thread_pool_->Enqueue(&FbxParser::ReadUVs, this, std::ref(*mesh), nut_mesh);
+//	auto ret4 = p_thread_pool_->Enqueue(&FbxParser::ReadTangent, this, std::ref(*mesh), nut_mesh);
+	if(ret1.get()&& ret2.get()&&ret3.get())
 	{
-		if(p_thread_pool_->Enqueue(&FbxParser::ReadUVs, this, std::ref(*mesh), nut_mesh).get())
-		{
-			geo->AddMesh(nut_mesh);
-			scene.Geometries[mesh->GetName()] = geo;
-			return true;
-		}
-
+		CalculateTangant(nut_mesh);
+		geo->AddMesh(nut_mesh);
+		scene.Geometries[mesh->GetName()] = geo;
+		return true;
 	}
 	return false;
 }
@@ -347,7 +366,6 @@ bool Engine::FbxParser::ReadNormal(const fbxsdk::FbxMesh& mesh, std::shared_ptr<
 	auto* normals = mesh.GetElementNormal(0);
 	int vertex_count = mesh.GetControlPointsCount(), data_size = 0;
 	void* data = nullptr;
-	std::vector<Vector3f> temp_v;
 	if (normals->GetMappingMode() == fbxsdk::FbxLayerElement::EMappingMode::eByControlPoint)
 	{
 		data = new float[vertex_count * 3];
@@ -359,11 +377,9 @@ bool Engine::FbxParser::ReadNormal(const fbxsdk::FbxMesh& mesh, std::shared_ptr<
 			else if (normals->GetReferenceMode() == fbxsdk::FbxLayerElement::EReferenceMode::eIndexToDirect)
 				normal_index = normals->GetIndexArray().GetAt(i);
 			auto normal = normals->GetDirectArray().GetAt(normal_index);
-			Vector3f n{ (float)normal[0],(float)normal[1],(float)normal[2] };
-			reinterpret_cast<float*>(data)[i * 3] = normals->GetDirectArray().GetAt(normal_index)[0];
-			reinterpret_cast<float*>(data)[i * 3 + 1] = normals->GetDirectArray().GetAt(normal_index)[1];
-			reinterpret_cast<float*>(data)[i * 3 + 2] = normals->GetDirectArray().GetAt(normal_index)[2];
-			temp_v.push_back(n);
+			reinterpret_cast<float*>(data)[i * 3] = normal[0];
+			reinterpret_cast<float*>(data)[i * 3 + 1] = normal[1];
+			reinterpret_cast<float*>(data)[i * 3 + 2] = normal[2];
 		}
 	}
 	else if (normals->GetMappingMode() == fbxsdk::FbxLayerElement::EMappingMode::eByPolygonVertex)
@@ -382,11 +398,9 @@ bool Engine::FbxParser::ReadNormal(const fbxsdk::FbxMesh& mesh, std::shared_ptr<
 				else if (normals->GetReferenceMode() == fbxsdk::FbxLayerElement::EReferenceMode::eIndexToDirect)
 					normal_index = normals->GetIndexArray().GetAt(cur_vertex_id);
 				auto normal = normals->GetDirectArray().GetAt(normal_index);
-				Vector3f n{ (float)normal[0],(float)normal[1],(float)normal[2] };
-				reinterpret_cast<float*>(data)[cur_vertex_id * 3] = normals->GetDirectArray().GetAt(normal_index)[0];
-				reinterpret_cast<float*>(data)[cur_vertex_id * 3 + 1] = normals->GetDirectArray().GetAt(normal_index)[1];
-				reinterpret_cast<float*>(data)[cur_vertex_id * 3 + 2] = normals->GetDirectArray().GetAt(normal_index)[2];
-				temp_v.push_back(n);
+				reinterpret_cast<float*>(data)[cur_vertex_id * 3] = normal[0];
+				reinterpret_cast<float*>(data)[cur_vertex_id * 3 + 1] = normal[1];
+				reinterpret_cast<float*>(data)[cur_vertex_id * 3 + 2] = normal[2];
 				++cur_vertex_id;
 			}
 		}
@@ -398,7 +412,7 @@ bool Engine::FbxParser::ReadNormal(const fbxsdk::FbxMesh& mesh, std::shared_ptr<
 		NE_LOG(ALL, kWarning, "{}'s normal with 0 vertex", mesh.GetName())
 		return false;
 	}
-	nut_mesh->AddVertexArray(std::move(_v_array));
+	nut_mesh->AddVertexArray(std::move(_v_array),1);
 	return true;
 }
 
@@ -428,7 +442,7 @@ bool Engine::FbxParser::ReadVertex(const fbxsdk::FbxMesh& mesh, std::shared_ptr<
 		NE_LOG(ALL, kWarning, "{}'s vertex with 0 vertex", mesh.GetName())
 		return false;
 	}
-	nut_mesh->AddVertexArray(std::move(_v_array));
+	nut_mesh->AddVertexArray(std::move(_v_array),0);
 	return true;
 }
 
@@ -491,8 +505,107 @@ bool Engine::FbxParser::ReadUVs(const fbxsdk::FbxMesh& mesh, std::shared_ptr<Sce
 			NE_LOG(ALL, kWarning, "{}'s uv with 0 vertex", mesh.GetName())
 				return false;
 		}
-		nut_mesh->AddVertexArray(std::move(_u_array));
+		nut_mesh->AddVertexArray(std::move(_u_array),2);
 	}
+	return true;
+}
+
+//https://stackoverflow.com/questions/70756710/model-dont-have-tangent-or-binormal-value-fbxsdk-directx
+bool Engine::FbxParser::ReadTangent(const fbxsdk::FbxMesh& mesh, std::shared_ptr<SceneObjectMesh> nut_mesh)
+{
+	int tangent_num = mesh.GetElementTangentCount();
+	assert(tangent_num > 0);
+	auto* tangents = mesh.GetElementTangent();
+	int vertex_count = mesh.GetControlPointsCount(),data_size = 0;
+	void* data = nullptr;
+	if(tangents->GetMappingMode() == fbxsdk::FbxGeometryElement::eByPolygonVertex)
+	{
+		int trangle_count = mesh.GetPolygonCount();
+		vertex_count = trangle_count * 3;
+		data = new float[vertex_count * 3];
+		int cur_vertex_id = 0;
+		for (int trangle_id = 0; trangle_id < trangle_count; ++trangle_id)
+		{
+			for (int point_id = 0; point_id < 3; ++point_id)
+			{
+				UINT tangent_id = 0;
+				if (tangents->GetReferenceMode() == fbxsdk::FbxLayerElement::EReferenceMode::eDirect)
+					tangent_id = cur_vertex_id;
+				else if (tangents->GetReferenceMode() == fbxsdk::FbxLayerElement::EReferenceMode::eIndexToDirect)
+					tangent_id = tangents->GetIndexArray().GetAt(cur_vertex_id);
+				auto tangent = tangents->GetDirectArray().GetAt(tangent_id);
+				reinterpret_cast<float*>(data)[cur_vertex_id * 3] = tangent[0];
+				reinterpret_cast<float*>(data)[cur_vertex_id * 3 + 1] = tangent[1];
+				reinterpret_cast<float*>(data)[cur_vertex_id * 3 + 2] = tangent[2];
+				++cur_vertex_id;
+			}
+		}
+	}
+	else if(tangents->GetMappingMode() == fbxsdk::FbxGeometryElement::eByControlPoint)
+	{
+		data = new float[vertex_count * 3];
+		for(UINT vertex_id = 0; vertex_id < vertex_count; ++vertex_id)
+		{
+			UINT tangent_id = 0;
+			if (tangents->GetReferenceMode() == fbxsdk::FbxGeometryElement::eDirect)
+				tangent_id = vertex_id;
+			else if(tangents->GetReferenceMode() == fbxsdk::FbxGeometryElement::eIndexToDirect)
+				tangent_id = tangents->GetIndexArray().GetAt(vertex_id);
+			auto tangent = tangents->GetDirectArray().GetAt(tangent_id);
+			reinterpret_cast<float*>(data)[vertex_id * 3] = tangent[0];
+			reinterpret_cast<float*>(data)[vertex_id * 3 + 1] = tangent[1];
+			reinterpret_cast<float*>(data)[vertex_id * 3 + 2] = tangent[2];
+		}
+
+	}
+	SceneObjectVertexArray& _t_array = *new SceneObjectVertexArray(EVertexArrayType::kTangant, 0u, EVertexDataType::kVertexDataFloat3,
+		data, vertex_count);
+	if (vertex_count == 0)
+	{
+		NE_LOG(ALL, kWarning, "{}'s tangant with 0 vertex", mesh.GetName())
+			return false;
+	}
+	nut_mesh->AddVertexArray(std::move(_t_array), 3);
+	return true;
+}
+
+bool Engine::FbxParser::CalculateTangant(std::shared_ptr<SceneObjectMesh> nut_mesh)
+{
+	INT64 polygon_num = nut_mesh->GetPolygonNum();
+	INT64 vertex_num = polygon_num * 3;
+	INT64 vectex_count = 0;
+	void* data = new float[vertex_num * 3];
+	for(INT64 polygon_count = 0; polygon_count < polygon_num; ++polygon_count)
+	{
+		auto polygon_vertexs = nut_mesh->GetVertexPosition(polygon_count);
+		auto polygon_uvs = nut_mesh->GetVertexUV(polygon_count);
+		Vector3f pos1 = polygon_vertexs[0];
+		Vector3f pos2 = polygon_vertexs[1];
+		Vector3f pos3 = polygon_vertexs[2];
+		Vector2f uv1 = polygon_uvs[0];
+		Vector2f uv2 = polygon_uvs[1];
+		Vector2f uv3 = polygon_uvs[2];
+		Vector3f edge1 = pos2 - pos1;
+		Vector3f edge2 = pos3 - pos1;
+		Vector2f duv1 = uv2 - uv1;
+		Vector2f duv2 = uv3 - uv1;
+		Vector3f tangent{};
+		float f = 1.f / (duv1.x * duv2.y - duv2.x * duv1.y);
+		tangent.x = f * (duv2.y * edge1.x - duv1.y * edge2.x);
+		tangent.y = f * (duv2.y * edge1.y - duv1.y * edge2.y);
+		tangent.z = f * (duv2.y * edge1.z - duv1.y * edge2.z);
+		Normalize(tangent);
+		for(int i = 0; i < 3; ++i)
+		{
+			reinterpret_cast<float*>(data)[vectex_count * 3] = tangent[0];
+			reinterpret_cast<float*>(data)[vectex_count * 3 + 1] = tangent[1];
+			reinterpret_cast<float*>(data)[vectex_count * 3 + 2] = tangent[2];
+			++vectex_count;
+		}
+	}
+	SceneObjectVertexArray& _t_array = *new SceneObjectVertexArray(EVertexArrayType::kTangant, 0u, EVertexDataType::kVertexDataFloat3,
+		data, vertex_num);
+	nut_mesh->AddVertexArray(std::move(_t_array), 3);
 	return true;
 }
 
@@ -510,8 +623,13 @@ void Engine::FbxParser::CopyTexture(std::string src, std::string dst, std::strin
 		fs::create_directory(dst_path);
 	}
 	dst_path.append(name);
+
 	if(fs::exists(dst_path))
-		NE_LOG(ALL, kWarning, "{} already exist,origin content will be overwrite", dst_path.string())
+	{
+		NE_LOG(ALL, kWarning, "{} already exist,nothing happend", dst_path.string())
+		return;
+	}
+
 	if(!fs::copy_file(src_path, dst_path,fs::copy_options::overwrite_existing))
 		NE_LOG(ALL, kError, "texture form {} copy failed", src)
 	else

@@ -33,10 +33,13 @@ cbuffer DrawBatchContext : register(b1)
 {
 	float4x4 g_object_matrix_;
 	float4x4 g_normal_matrix_;
-	float4 g_base_color_;
-	float4 g_specular_color_;
-	float g_gloss_;
-	float g_use_texture_;
+	//for material
+	float3 g_base_color_;
+	float g_metallic_;
+	float3 g_emissive_color_;
+	float g_roughness_;
+	float g_ambient_oc_;
+	int g_mat_flag_; //low 1 for base_color,low 2 for roughness,low 3 for metallic,low 4 for emissive,low 5 for normal,low 6 form ao
 };
 
 cbuffer LightIndex : register(b2)
@@ -46,13 +49,19 @@ cbuffer LightIndex : register(b2)
 	int g_cur_light_index;
 };
 
+Texture2D g_tex_base_color : register(t0);
+Texture2D g_tex_roughness : register(t1);
+Texture2D g_tex_metallic : register(t2);
+Texture2D g_tex_emissive : register(t3);
+Texture2D g_tex_normal : register(t4);
+Texture2D g_tex_ambien_oc : register(t5);
 
-Texture2D g_texture : register(t0);
-Texture2D g_shadow_map[6] : register(t1);
-TextureCube g_cube_shadow_map[2] : register(t7);
-Texture2D g_spherical_map_env : register(t9);
-TextureCube g_cube_map_env : register(t10);
-TextureCube g_filtered_irridance_map : register(t11);
+Texture2D g_shadow_map[6] : register(t6);
+TextureCube g_cube_shadow_map[2] : register(t12);
+
+Texture2D g_spherical_map_env : register(t14);
+TextureCube g_cube_map_env : register(t15);
+TextureCube g_filtered_irridance_map : register(t16);
 
 
 SamplerState g_sampler : register(s0);
