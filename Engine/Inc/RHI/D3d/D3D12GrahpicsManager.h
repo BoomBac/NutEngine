@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../../pch.h"
+#include "../../../pch.h"
 
 #include "Framework/Common/GraphicsManager.h"
 #include "Framework/Common/Buffer.h"
@@ -154,7 +154,7 @@ namespace Engine
             INT32 vertex_buf_len;
         };
         static constexpr uint32_t		    kTextureDescStartIndex = kFrameCount * (1 + kMaxSceneObjectCount);
-        static constexpr FLOAT              kBackColor[] = { 0.66f, 0.828f, 1.f, 1.0f };
+        static constexpr FLOAT              kBackColor[] = { 0.33f, 0.414f, 1.f, 1.0f };
         static constexpr INT32              kNonMaterialTextureStart = kMaxTextureCount - 32;
 
         ComPtr<ID3D12Resource> p_env_map_ = nullptr;

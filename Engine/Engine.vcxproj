@@ -222,7 +222,8 @@
     <ClInclude Include="Inc\Physics\MotionState.h" />
     <ClInclude Include="Inc\Physics\NutPhysicsManager.h" />
     <ClInclude Include="Inc\Physics\RigidBody.h" />
-    <ClInclude Include="Inc\RHI\D3D12GrahpicsManager.h" />
+    <ClInclude Include="Inc\RHI\D3d\CommandQueue.h" />
+    <ClInclude Include="Inc\RHI\D3d\D3D12GrahpicsManager.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
@@ -262,7 +263,8 @@
     <ClCompile Include="Src\Framework\Scene\SceneObjectMesh.cpp" />
     <ClCompile Include="Src\Framework\Scene\SceneObjectTexture.cpp" />
     <ClCompile Include="Src\Physics\NutPhysicsManager.cpp" />
-    <ClCompile Include="Src\RHI\D3D12GraphicsManager.cpp" />
+    <ClCompile Include="Src\RHI\D3d\CommandQueue.cpp" />
+    <ClCompile Include="Src\RHI\D3d\D3D12GraphicsManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Asset\Shader\cs_test.hlsl">

@@ -1,9 +1,12 @@
 #include "pch.h"
-#include "RHI/D3D12GrahpicsManager.h"
+#include "RHI/D3d/D3D12GrahpicsManager.h"
+#include "RHI/D3d/CommandQueue.h"
+
 #include "Framework/Interface/IApplication.h"
 #include "Framework/Common/AssetLoader.h"
 #include "Framework/Common/SceneManager.h"
 #include "Framework/Common/Log.h"
+
 
 
 
@@ -1649,6 +1652,7 @@ namespace Engine
 		}
 		ThrowIfFailed(hr = D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(p_device_.GetAddressOf())));
 		// Describe and create the command queue.
+
 		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;

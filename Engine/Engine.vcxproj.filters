@@ -82,6 +82,12 @@
     <Filter Include="Src\Framework\Scene">
       <UniqueIdentifier>{b34aaf1a-64d8-4804-9462-d6ae52ac2804}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Src\RHI\D3d">
+      <UniqueIdentifier>{3c246d68-49e0-4402-bf1d-d530d4bed473}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inc\RHI\D3d">
+      <UniqueIdentifier>{8c708881-7ec2-4c1e-b8b6-573548c31b22}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -113,9 +119,6 @@
     </ClInclude>
     <ClInclude Include="Inc\Framework\Common\GraphicsManager.h">
       <Filter>Inc\Framework\Common</Filter>
-    </ClInclude>
-    <ClInclude Include="Inc\RHI\D3D12GrahpicsManager.h">
-      <Filter>Inc\RHI</Filter>
     </ClInclude>
     <ClInclude Include="Inc\Framework\Common\AssetLoader.h">
       <Filter>Inc\Framework\Common</Filter>
@@ -261,6 +264,12 @@
     <ClInclude Include="Inc\Framework\Parser\HDR.h">
       <Filter>Inc\Framework\Parser</Filter>
     </ClInclude>
+    <ClInclude Include="Inc\RHI\D3d\D3D12GrahpicsManager.h">
+      <Filter>Inc\RHI\D3d</Filter>
+    </ClInclude>
+    <ClInclude Include="Inc\RHI\D3d\CommandQueue.h">
+      <Filter>Inc\RHI\D3d</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -280,9 +289,6 @@
     </ClCompile>
     <ClCompile Include="Src\Framework\Common\GraphicsManager.cpp">
       <Filter>Src\Framework\Common</Filter>
-    </ClCompile>
-    <ClCompile Include="Src\RHI\D3D12GraphicsManager.cpp">
-      <Filter>Src\RHI</Filter>
     </ClCompile>
     <ClCompile Include="Src\Framework\Common\AssetLoader.cpp">
       <Filter>Src\Framework\Common</Filter>
@@ -358,6 +364,12 @@
     </ClCompile>
     <ClCompile Include="Src\Framework\Scene\SceneObjectMesh.cpp">
       <Filter>Src\Framework\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\RHI\D3d\D3D12GraphicsManager.cpp">
+      <Filter>Src\RHI\D3d</Filter>
+    </ClCompile>
+    <ClCompile Include="Src\RHI\D3d\CommandQueue.cpp">
+      <Filter>Src\RHI\D3d</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
